@@ -1,8 +1,7 @@
 Formsender
 ==========
 
-Formsender retrieves data from a form and sends the data to an email address.
-
+Sends emails containing the information in a form
 
 To run the application,
 
