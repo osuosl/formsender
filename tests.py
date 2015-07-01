@@ -37,8 +37,8 @@ class TestForms(unittest.TestCase):
         print trueApp
         assert app == trueApp
 
-
-
+    def test_form_page(self):
+        message = {'age': u'19', 'name': u'matthew'}
 
 if __name__ == '__main__':
     unittest.main()

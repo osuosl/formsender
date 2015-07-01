@@ -51,7 +51,6 @@ class Forms(object):
             s.quit()
             return False
 
-
     def on_form_page(self, request):
         error = None
         message = dict()
