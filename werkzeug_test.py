@@ -20,6 +20,10 @@ class Test_formsender(unittest.TestCase):
                create_msg(request)['file'] == builder.form['file'] and
                create_msg(request)['test'] == builder.form['test'])
 
+    def test_send_email(self):
+        form = Forms()
+        assert form.send_email({'age': u'test', 'name': u'dict'})
+
 
 if __name__ == '__main__':
     unittest.main()
