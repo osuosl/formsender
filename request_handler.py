@@ -8,6 +8,7 @@ from werkzeug.wsgi import SharedDataMiddleware
 from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
+from conf import EMAIL
 
 #WSGI Application
 class Forms(object):
@@ -42,7 +43,7 @@ class Forms(object):
         msg_send = MIMEText(str(msg))
         s = smtplib.SMTP('localhost')
         try:
-            s.sendmail('theform', 'your@email.com', msg_send.as_string())
+            s.sendmail('theform', EMAIL, msg_send.as_string())
             s.quit()
             return True
         except:
