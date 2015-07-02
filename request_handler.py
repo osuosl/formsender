@@ -1,5 +1,4 @@
 import os
-import redis
 import urlparse
 import smtplib
 from werkzeug.wrappers import Request, Response
@@ -13,8 +12,7 @@ from email.mime.text import MIMEText
 #WSGI Application
 class Forms(object):
 
-    def __init__(self, config):
-        self.redis = redis.Redis(config['redis_host'], config['redis_port'])
+    def __init__(self):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
@@ -53,27 +51,32 @@ class Forms(object):
 
     def on_form_page(self, request):
         error = None
-        message = dict()
-        if request.method == 'POST':
-            for key in request.form:
-                message[key] = request.form[key]
-            if message:
-                self.send_email(message)
-                return self.render_template('submitted.html', error=error, url=message)
+        message = create_msg(request)
+        if message:
+            self.send_email(message)
+            return self.render_template('submitted.html', error=error, url=message)
         return self.render_template('index.html', error=error, url=message)
 
 
 # Standalone/helper functions
-def create_app(redis_host='localhost', redis_port=6379, with_static=True):
-    app = Forms({
-        'redis_host':       redis_host,
-        'redis_port':       redis_port
-    })
+def create_app(with_static=True):
+    app = Forms()
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
         })
     return app
+
+def create_msg(request):
+    message = dict()
+    if request.method == 'POST':
+        for key in request.form:
+            message[key] = request.form[key]
+        if message:
+            return message
+        return None
+    return None
+
 
 # Application logic
 if __name__ == '__main__':
