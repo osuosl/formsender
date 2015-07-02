@@ -15,26 +15,26 @@ class Test_formsender(unittest.TestCase):
                                       'file': 'my file contents',
                                       'test': 'test.txt'})
         env = builder.get_environ()
-        request = Request(env)
-        assert (create_msg(request)['foo'] == builder.form['foo'] and
-               create_msg(request)['file'] == builder.form['file'] and
-               create_msg(request)['test'] == builder.form['test'])
+        req = Request(env)
+        assert (create_msg(req)['foo'] == builder.form['foo'] and
+               create_msg(req)['file'] == builder.form['file'] and
+               create_msg(req)['test'] == builder.form['test'])
 
     def test_create_msg_no_content(self):
         builder = EnvironBuilder(method='POST', data={})
         env = builder.get_environ()
-        request = Request(env)
-        assert create_msg(request) is None
+        req = Request(env)
+        assert create_msg(req) is None
 
     def test_create_msg_no_content_get_method(self):
         builder = EnvironBuilder(method='GET', data={})
         env = builder.get_environ()
-        request = Request(env)
-        assert create_msg(request) is None
+        req = Request(env)
+        assert create_msg(req) is None
 
     def test_send_email(self):
-        form = Forms()
-        assert form.send_email({'age': u'test', 'name': u'dict'})
+        app = Forms()
+        assert app.send_email({'age': u'test', 'name': u'dict'})
 
 
 if __name__ == '__main__':
