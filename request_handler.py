@@ -75,6 +75,7 @@ def create_msg(request):
         if message:
             return message
         return None
+    return None
 
 
 # Application logic
