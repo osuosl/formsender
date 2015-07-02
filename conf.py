@@ -2,4 +2,4 @@
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
 
-EMAIL = u'mrsj@osuosl.org'
+EMAIL = u'your@email.com'
