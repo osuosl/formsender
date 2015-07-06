@@ -61,7 +61,7 @@ class TestFormsender(unittest.TestCase):
         """
         app = Forms()
         assert app.send_email({'name': u'Valid Guy',
-                               'email': u'mrsj@osuosl.org',
+                               'email': u'example@osuosl.org',
                                'hidden': '',
                                'tokn': TOKN})
 
@@ -74,7 +74,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': 'mrsj@osuosl.org',
+                                       'email': 'example@osuosl.org',
                                        'hidden': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
@@ -93,7 +93,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': '   ',
-                                       'email': 'mrsj@osuosl.org',
+                                       'email': 'example@osuosl.org',
                                        'hidden': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
@@ -132,7 +132,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': 'mrsj@osuosl.org',
+                                       'email': 'example@osuosl.org',
                                        'hidden': 'r',
                                        'tokn': TOKN })
         env = builder.get_environ()
