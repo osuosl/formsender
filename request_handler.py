@@ -8,13 +8,15 @@ from werkzeug.wsgi import SharedDataMiddleware
 from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
-from conf import EMAIL
+from conf import EMAIL, TOKN
+from validate_email import validate_email
 
 #WSGI Application
 class Forms(object):
 
     def __init__(self):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
+        self.error = None
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
         self.url_map = Map([Rule('/', endpoint='form_page')])
@@ -51,12 +53,28 @@ class Forms(object):
             return False
 
     def on_form_page(self, request):
-        error = None
-        message = create_msg(request)
-        if message:
-            self.send_email(message)
-            return self.render_template('submitted.html', error=error, url=message)
-        return self.render_template('index.html', error=error, url=message)
+        self.error = None
+        message = None
+        if request.method == 'POST':
+            if not is_valid_email(request):
+                self.error = 'Invalid Email'
+                message = None
+            elif not validate_name(request):
+                self.error = 'Invalid Name'
+                message = None
+            elif not is_hidden_field_empty(request) or not is_valid_token(request):
+                self.error = 'Improper Form Submission'
+                message = None
+            else:
+                message = create_msg(request)
+                if message:
+                    self.send_email(message)
+                    return self.render_template('submitted.html',
+                                                error=self.error,
+                                                url=message)
+        return self.render_template('index.html',
+                                    error=self.error,
+                                    url=message)
 
 
 # Standalone/helper functions
@@ -78,19 +96,34 @@ def create_msg(request):
         return None
     return None
 
-def validate_email(request):
-    pass
+def is_valid_email(request):
+    valid_email = validate_email(request.form['email'],
+                                 check_mx=True,
+                                 verify=True)
+    if valid_email:
+        return valid_email
+    return False
+
 
 def validate_name(request):
-    pass
+    name = request.form['name']
+    name_with_no_spaces = name.replace(" ", "")
+    if name_with_no_spaces.isalpha():
+        return True
+    return False
+
 
 def is_hidden_field_empty(request):
-    pass
+    if request.form['hidden'] == "":
+        return True
+    return False
 
 def is_valid_token(request):
-    pass
+    if request.form['tokn'] == TOKN:
+        return True
+    return False
 
-    
+
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple

@@ -1,6 +1,6 @@
 from conf import TOKN, EMAIL
 import unittest
-from request_handler import (Forms, create_msg, validate_name, validate_email,
+from request_handler import (Forms, create_msg, validate_name, is_valid_email,
                              is_hidden_field_empty, is_valid_token)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
@@ -46,8 +46,8 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='GET',
                                  data={'foo' : 'this is some text',
-                                      'file': 'my file contents',
-                                      'test': 'test.txt'})
+                                       'file': 'my file contents',
+                                       'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
         assert create_msg(req) is None
@@ -60,33 +60,131 @@ class TestFormsender(unittest.TestCase):
         False when unsuccessfull.
         """
         app = Forms()
-        assert app.send_email({'age': u'test', 'name': u'dict'})
+        assert app.send_email({'name': u'Valid Guy',
+                               'email': u'mrsj@osuosl.org',
+                               'hidden': '',
+                               'tokn': TOKN})
 
-    def test_validate_email_with_valid(self):
+    def test_validations_valid_data(self):
         """
-        Tests validate_email with a valid email
+        Tests the form validation with valid data.
 
-        validate_email checks that the email submitted to the form is
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'mrsj@osuosl.org',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        app = Forms()
+        app.on_form_page(req)
+        assert app.error is None
+
+    def test_validations_invalid_name(self):
+        """
+        Tests the form validation with an invalid name.
+
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        Invalid name field causes an 'Invalid Name' error.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'r0b0tm@n!',
+                                       'email': 'mrsj@osuosl.org',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        app = Forms()
+        app.on_form_page(req)
+        assert app.error == 'Invalid Name'
+
+    def test_validations_invalid_email(self):
+        """
+        Tests the form validation with an invalid email.
+
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        Invalid email field causes an 'Invalid Email' error.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'invalid@example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        app = Forms()
+        app.on_form_page(req)
+        assert app.error == 'Invalid Email'
+
+    def test_validations_invalid_hidden(self):
+        """
+        Tests the form validation with content in the hidden field.
+
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        Content in the hidden field causes an 'Improper Form Submission'
+        error.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'mrsj@osuosl.org',
+                                       'hidden': 'r',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        app = Forms()
+        app.on_form_page(req)
+        assert app.error == 'Improper Form Submission'
+
+    def test_validations_invalid_token(self):
+        """
+        Tests the form validation with an invalid token.
+
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        An invalid token causes the 'Improper Form Submission' error.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'mrsj@osuosl.org',
+                                       'hidden': '',
+                                       'tokn': 'evilrobot' })
+        env = builder.get_environ()
+        req = Request(env)
+        app = Forms()
+        app.on_form_page(req)
+        assert app.error == 'Improper Form Submission'
+
+    def test_is_valid_email_with_valid(self):
+        """
+        Tests is_valid_email with a valid email
+
+        is_valid_email checks that the email submitted to the form is
         valid and exists. This function call should return true.
         """
         builder = EnvironBuilder(method='POST',
                                  data={'email': 'mrsj@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
-        assert validate_email(req)
+        assert is_valid_email(req)
 
-    def test_validate_email_with_invalid(self):
+    def test_is_valid_email_with_invalid(self):
         """
-        Tests validate_email with an invalid email
+        Tests is_valid_email with an invalid email
 
-        validate_email checks that the email submitted to the form is
+        is_valid_email checks that the email submitted to the form is
         valid and exists. This function call should return false.
         """
         builder = EnvironBuilder(method='POST',
                                  data={'email': 'nope@example.com'})
         env = builder.get_environ()
         req = Request(env)
-        assert validate_email(req) is False
+        assert is_valid_email(req) is False
 
     def test_validate_name_with_valid(self):
         """
