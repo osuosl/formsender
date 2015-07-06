@@ -63,6 +63,12 @@ class TestFormsender(unittest.TestCase):
         assert app.send_email({'age': u'test', 'name': u'dict'})
 
     def test_validate_email_with_valid(self):
+        """
+        Tests validate_email with a valid email
+
+        validate_email checks that the email submitted to the form is
+        valid and exists. This function call should return true.
+        """
         builder = EnvironBuilder(method='POST',
                                  data={'email': 'mrsj@osuosl.org'})
         env = builder.get_environ()
@@ -70,44 +76,91 @@ class TestFormsender(unittest.TestCase):
         assert validate_email(req)
 
     def test_validate_email_with_invalid(self):
+        """
+        Tests validate_email with an invalid email
+
+        validate_email checks that the email submitted to the form is
+        valid and exists. This function call should return false.
+        """
         builder = EnvironBuilder(method='POST',
-                                 data={'email': 'nope@osuosl.org'})
+                                 data={'email': 'nope@example.com'})
         env = builder.get_environ()
         req = Request(env)
         assert validate_email(req) is False
 
     def test_validate_name_with_valid(self):
+        """
+        Tests validate_name with a valid name
+
+        validate_name checks that the name submitted to the form does
+        not contain disallowed characters. This function call should return
+        true.
+        """
         builder = EnvironBuilder(method='POST', data={'name': 'Matthew'})
         env = builder.get_environ()
         req = Request(env)
         assert validate_name(req)
 
     def test_validate_name_with_invalid(self):
-        builder = EnvironBuilder(method='POST', data={'name': '89~hello/world'})
+        """
+        Tests validate_name with an invalid name
+
+        validate_name checks that the name submitted to the form does
+        not contain disallowed characters. This function call should
+        return false.
+        """
+        builder = EnvironBuilder(method='POST', data={'name':
+                                                      '89~hello/world'})
         env = builder.get_environ()
         req = Request(env)
         assert validate_name(req) is False
 
     def test_is_hidden_field_empty_empty(self):
+        """
+        Tests is_hidden_field_empty with 'hidden' field empty
+
+        is_hidden_field_empty checks that the hidden field in the form
+        is empty. This function call should return true.
+        """
         builder = EnvironBuilder(method='POST', data={'hidden': ''})
         env = builder.get_environ()
         req = Request(env)
         assert is_hidden_field_empty(req)
 
     def test_is_hidden_field_empty_full(self):
+        """
+        Tests is_hidden_field_empty with contents in 'hidden' field
+
+        is_hidden_field_empty checks that the hidden field in the form
+        is empty. This function call should return false.
+        """
         builder = EnvironBuilder(method='POST', data={'hidden': 'nope'})
         env = builder.get_environ()
         req = Request(env)
         assert is_hidden_field_empty(req) is False
 
     def test_is_valid_token_valid(self):
-        builder = EnvironBuilder(method='POST', data={'tok': TOKN})
+        """
+        Tests is_valid_token with TOKN defined in conf.py
+
+        is_valid_token checks that the token provided by the form matches
+        token described in the settings file. This function call should
+        return true.
+        """
+        builder = EnvironBuilder(method='POST', data={'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         assert is_valid_token(req)
 
     def test_is_valid_token_invalid(self):
-        builder = EnvironBuilder(method='POST', data={'tok': 'I hate FOSS'})
+        """
+        Tests is_valid_token with invalid token
+
+        is_valid_token checks that the token provided by the form matches
+        token described in the settings file. This function call should
+        return false.
+        """
+        builder = EnvironBuilder(method='POST', data={'tokn': 'imarobot'})
         env = builder.get_environ()
         req = Request(env)
         assert is_valid_token(req) is False
