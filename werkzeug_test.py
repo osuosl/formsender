@@ -151,7 +151,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': 'mrsj@osuosl.org',
+                                       'email': 'example@osuosl.org',
                                        'hidden': '',
                                        'tokn': 'evilrobot' })
         env = builder.get_environ()
@@ -168,7 +168,7 @@ class TestFormsender(unittest.TestCase):
         valid and exists. This function call should return true.
         """
         builder = EnvironBuilder(method='POST',
-                                 data={'email': 'mrsj@osuosl.org'})
+                                 data={'email': 'example@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
         assert is_valid_email(req)
