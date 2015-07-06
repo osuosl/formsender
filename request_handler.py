@@ -78,7 +78,19 @@ def create_msg(request):
         return None
     return None
 
+def validate_email(request):
+    pass
 
+def validate_name(request):
+    pass
+
+def is_hidden_field_empty(request):
+    pass
+
+def is_valid_token(request):
+    pass
+
+    
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple

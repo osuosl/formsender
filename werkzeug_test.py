@@ -1,6 +1,7 @@
 from conf import TOKN, EMAIL
 import unittest
-from request_handler import Forms, create_msg
+from request_handler import (Forms, create_msg, validate_name, validate_email,
+                             is_hidden_field_empty, is_valid_token)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
@@ -49,7 +50,7 @@ class Test_formsender(unittest.TestCase):
                                  data={'email': 'nope@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
-        assert not validate_email(req)
+        assert validate_email(req) is False
 
     def test_validate_name_with_valid(self):
         builder = EnvironBuilder(method='POST', data={'name': 'Matthew'})
@@ -61,7 +62,7 @@ class Test_formsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': '89~hello/world'})
         env = builder.get_environ()
         req = Request(env)
-        assert not validate_name(req)
+        assert validate_name(req) is False
 
     def test_is_hidden_field_empty_empty(self):
         builder = EnvironBuilder(method='POST', data={'hidden': ''})
@@ -73,7 +74,7 @@ class Test_formsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'hidden': 'nope'})
         env = builder.get_environ()
         req = Request(env)
-        assert not is_hidden_field_empty(req)
+        assert is_hidden_field_empty(req) is False
 
     def test_is_valid_token_valid(self):
         builder = EnvironBuilder(method='POST', data={'tok': TOKN})
@@ -85,7 +86,7 @@ class Test_formsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tok': 'I hate FOSS'})
         env = builder.get_environ()
         req = Request(env)
-        assert not is_valid_token(req)
+        assert is_valid_token(req) is False
 
 
 if __name__ == '__main__':
