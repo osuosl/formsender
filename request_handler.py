@@ -56,8 +56,12 @@ class Forms(object):
 
     # Sets up and sends the email
     def send_email(self, msg):
+        # Format the message
         msg_send = MIMEText(str(msg))
+        # Sets up a temporary mail server to send from (I think)
         s = smtplib.SMTP('localhost')
+        # Attempts to send the mail to EMAIL, with the message formatted as a
+        # string
         try:
             s.sendmail('theform', EMAIL, msg_send.as_string())
             s.quit()
@@ -67,6 +71,7 @@ class Forms(object):
     # Renders form if form was previously empty, the successfully emailed page
     # if not
     def on_form_page(self, request):
+<<<<<<< HEAD
         self.error = None
         self.rater.increment_rate()
         message = None
@@ -144,7 +149,6 @@ class RateLimiter(object):
             self.reset_rate()
         return False
 
-# Global RateLimiter object
 
 
 # Standalone/helper functions
@@ -158,11 +162,16 @@ def create_app(with_static=True):
     return app
 
 # Creates the message to be sent in the email
+# This could use some improvement, as it currently just sends a dict with no
+# formatting. Needs to be made prettier
 def create_msg(request):
     message = dict()
     if request.method == 'POST':
+        # Takes the information from the request and puts it into the message
+        # dict
         for key in request.form:
             message[key] = request.form[key]
+        # If there is a message, return it, otherwise return None
         if message:
             return message
         return None
