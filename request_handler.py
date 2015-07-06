@@ -17,12 +17,16 @@ class Forms(object):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
+        # When the browser is pointed at the root of the website, call
+        # on_form_page
         self.url_map = Map([Rule('/', endpoint='form_page')])
 
+    # Renders a webpage based on a template
     def render_template(self, template_name, **context):
         t = self.jinja_env.get_template(template_name)
         return Response(t.render(context), mimetype='text/html')
 
+    # Really important. Handles deciding what happens
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
         try:
@@ -31,14 +35,17 @@ class Forms(object):
         except HTTPException, e:
             return e
 
+    # This starts the app. I think
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
         response = self.dispatch_request(request)
         return response(environ, start_response)
 
+    # Calls something. This is important but I don't know why
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
 
+    # Sets up and sends the email
     def send_email(self, msg):
         msg_send = MIMEText(str(msg))
         s = smtplib.SMTP('localhost')
@@ -50,6 +57,8 @@ class Forms(object):
             s.quit()
             return False
 
+    # Renders form if form was previously empty, the successfully emailed page
+    # if not
     def on_form_page(self, request):
         error = None
         message = create_msg(request)
@@ -68,6 +77,7 @@ def create_app(with_static=True):
         })
     return app
 
+# Creates the message to be sent in the email
 def create_msg(request):
     message = dict()
     if request.method == 'POST':
@@ -82,5 +92,7 @@ def create_msg(request):
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
+    # Creates the app
     app = create_app()
+    # Starts the listener
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
