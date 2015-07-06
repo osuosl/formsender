@@ -6,6 +6,7 @@ help:
 				@echo 'Usage:                                                        '
 				@echo '   make run       run the application on http://localhost:5000'
 				@echo '   make clean     remove the generated files                  '
+				@echo '   make tests     run tests                                   '
 				@echo '                                                              '
 
 run:
@@ -13,3 +14,6 @@ run:
 
 clean:
 	      rm *.pyc
+
+tests:
+	      $(PY) werkzeug_test.py
