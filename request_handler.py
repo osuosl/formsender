@@ -21,9 +21,9 @@ class Forms(object):
                                      autoescape=True)
         self.url_map = Map([Rule('/', endpoint='form_page')])
 
-    def render_template(self, template_name, **context):
+    def render_template(self, template_name, status, **context):
         t = self.jinja_env.get_template(template_name)
-        return Response(t.render(context), mimetype='text/html')
+        return Response(t.render(context), mimetype='text/html', status=status)
 
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
@@ -55,26 +55,31 @@ class Forms(object):
     def on_form_page(self, request):
         self.error = None
         message = None
+        status = 200
         if request.method == 'POST':
             if not is_valid_email(request):
                 self.error = 'Invalid Email'
                 message = None
+                status = 400
             elif not validate_name(request):
                 self.error = 'Invalid Name'
                 message = None
+                status = 400
             elif not is_hidden_field_empty(request) or not is_valid_token(request):
                 self.error = 'Improper Form Submission'
                 message = None
+                status = 400
             else:
                 message = create_msg(request)
                 if message:
                     self.send_email(message)
                     return self.render_template('submitted.html',
                                                 error=self.error,
-                                                url=message)
+                                                url=message,
+                                                status=status)
         return self.render_template('index.html',
                                     error=self.error,
-                                    url=message)
+                                    url=message, status=status)
 
 
 # Standalone/helper functions
@@ -107,8 +112,7 @@ def is_valid_email(request):
 
 def validate_name(request):
     name = request.form['name']
-    name_with_no_spaces = name.replace(" ", "")
-    if name_with_no_spaces.isalpha():
+    if name.strip():
         return True
     return False
 

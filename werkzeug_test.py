@@ -80,8 +80,8 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
         app = Forms()
-        app.on_form_page(req)
-        assert app.error is None
+        resp = app.on_form_page(req)
+        assert resp.status_code == 200
 
     def test_validations_invalid_name(self):
         """
@@ -92,15 +92,15 @@ class TestFormsender(unittest.TestCase):
         Invalid name field causes an 'Invalid Name' error.
         """
         builder = EnvironBuilder(method='POST',
-                                 data={'name': 'r0b0tm@n!',
+                                 data={'name': '   ',
                                        'email': 'mrsj@osuosl.org',
                                        'hidden': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
         app = Forms()
-        app.on_form_page(req)
-        assert app.error == 'Invalid Name'
+        resp = app.on_form_page(req)
+        assert resp.status_code == 400
 
     def test_validations_invalid_email(self):
         """
@@ -118,8 +118,8 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
         app = Forms()
-        app.on_form_page(req)
-        assert app.error == 'Invalid Email'
+        resp = app.on_form_page(req)
+        assert resp.status_code == 400
 
     def test_validations_invalid_hidden(self):
         """
@@ -138,8 +138,8 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
         app = Forms()
-        app.on_form_page(req)
-        assert app.error == 'Improper Form Submission'
+        resp = app.on_form_page(req)
+        assert resp.status_code == 400
 
     def test_validations_invalid_token(self):
         """
@@ -157,8 +157,8 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
         app = Forms()
-        app.on_form_page(req)
-        assert app.error == 'Improper Form Submission'
+        resp = app.on_form_page(req)
+        assert resp.status_code == 400
 
     def test_is_valid_email_with_valid(self):
         """
@@ -207,8 +207,7 @@ class TestFormsender(unittest.TestCase):
         not contain disallowed characters. This function call should
         return false.
         """
-        builder = EnvironBuilder(method='POST', data={'name':
-                                                      '89~hello/world'})
+        builder = EnvironBuilder(method='POST', data={'name': '  '})
         env = builder.get_environ()
         req = Request(env)
         assert validate_name(req) is False
