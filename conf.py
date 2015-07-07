@@ -2,4 +2,5 @@
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
 
-EMAIL = u'your@email.com'
+EMAIL = u'email@example.com'
+TOKN = u'1234567890-='
