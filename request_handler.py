@@ -10,11 +10,20 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from conf import EMAIL
 
-#WSGI Application
+"""
+WSGI Application
+
+This application listens to a form. When the form is submitted, this
+application takes the information submitted, formats it into a python
+dictiononary, then emails it to a specified email
+"""
 class Forms(object):
 
     def __init__(self):
+        # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
+        # Sets up the environment (I don't know what that means)
+        # Jinja is a templating engine for python
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
         # When the browser is pointed at the root of the website, call
@@ -23,7 +32,9 @@ class Forms(object):
 
     # Renders a webpage based on a template
     def render_template(self, template_name, **context):
+        # Need to figure out what jinja is
         t = self.jinja_env.get_template(template_name)
+        # Renders things somehow
         return Response(t.render(context), mimetype='text/html')
 
     # Really important. Handles deciding what happens
@@ -108,5 +119,5 @@ if __name__ == '__main__':
     from werkzeug.serving import run_simple
     # Creates the app
     app = create_app()
-    # Starts the listener
+    # Starts the listener thingy
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
