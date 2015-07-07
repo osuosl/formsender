@@ -47,10 +47,8 @@ class Forms(object):
         try:
             s.sendmail('theform', EMAIL, msg_send.as_string())
             s.quit()
-            return True
         except:
             s.quit()
-            return False
 
     def on_form_page(self, request):
         self.error = None

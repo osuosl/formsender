@@ -1,4 +1,5 @@
 from conf import TOKN, EMAIL
+import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
                              is_hidden_field_empty, is_valid_token)
@@ -7,6 +8,8 @@ from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
 from werkzeug.test import EnvironBuilder
 from StringIO import StringIO
+from mock import Mock, create_autospec, MagicMock, patch
+from email.mime.text import MIMEText
 
 
 class TestFormsender(unittest.TestCase):
@@ -59,11 +62,29 @@ class TestFormsender(unittest.TestCase):
         send_email returns True when it successfully sends an email and
         False when unsuccessfull.
         """
-        app = Forms()
-        assert app.send_email({'name': u'Valid Guy',
-                               'email': u'example@osuosl.org',
-                               'hidden': '',
-                               'tokn': TOKN})
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Construct message for assertion
+        msg = create_msg(req)
+        msg_send = MIMEText(str(msg))
+
+        # Mock sendmail function
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP.sendmail.mock_returns = Mock('smtp_connection')
+
+        # Call send_email and assert sendmail was called correctly
+        real = Forms()
+        real.send_email(msg)
+        smtplib.SMTP.sendmail.assert_called_with('theform',
+                                                 EMAIL,
+                                                 msg_send.as_string())
 
     def test_validations_valid_data(self):
         """
