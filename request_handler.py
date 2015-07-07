@@ -13,7 +13,13 @@ from conf import EMAIL, TOKN, CEILING
 from validate_email import validate_email
 from datetime import datetime
 
-#WSGI Application
+"""
+WSGI Application
+
+This application listens to a form. When the form is submitted, this
+application takes the information submitted, formats it into a python
+dictiononary, then emails it to a specified email
+"""
 class Forms(object):
     """
     This class listens for a form submission, checks that the data is valid, and
@@ -21,9 +27,11 @@ class Forms(object):
     """
 
     def __init__(self, rater):
+        # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.rater = rater
         self.error = None
+        # Jinja is a templating engine for python
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
         # When the browser is pointed at the root of the website, call
@@ -35,7 +43,6 @@ class Forms(object):
         t = self.jinja_env.get_template(template_name)
         return Response(t.render(context), mimetype='text/html', status=status)
 
-    # Really important. Handles deciding what happens
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
         try:
@@ -44,13 +51,11 @@ class Forms(object):
         except HTTPException, e:
             return e
 
-    # This starts the app. I think
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
         response = self.dispatch_request(request)
         return response(environ, start_response)
 
-    # Calls something. This is important but I don't know why
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
 
@@ -58,7 +63,7 @@ class Forms(object):
     def send_email(self, msg):
         # Format the message
         msg_send = MIMEText(str(msg))
-        # Sets up a temporary mail server to send from (I think)
+        # Sets up a temporary mail server to send from
         s = smtplib.SMTP('localhost')
         # Attempts to send the mail to EMAIL, with the message formatted as a
         # string
@@ -71,7 +76,6 @@ class Forms(object):
     # Renders form if form was previously empty, the successfully emailed page
     # if not
     def on_form_page(self, request):
-<<<<<<< HEAD
         self.error = None
         self.rater.increment_rate()
         message = None
@@ -215,5 +219,5 @@ if __name__ == '__main__':
     from werkzeug.serving import run_simple
     # Creates the app
     app = create_app()
-    # Starts the listener
+    # Starts the listener thingy
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
