@@ -77,7 +77,6 @@ class TestFormsender(unittest.TestCase):
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
-        smtplib.SMTP.sendmail.mock_returns = Mock('smtp_connection')
 
         # Call send_email and assert sendmail was called correctly
         real = Forms()
