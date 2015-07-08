@@ -282,6 +282,27 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         self.assertFalse(is_valid_token(req))
 
+    def test_rate_limiter_valid_rate(self):
+        """
+        Tests rate_limiter with a valid rate
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        for i in range(5):
+            app = Forms()
+            app.on_form_page(req)
+
+
+
+    def test_rate_limiter_invalid_rate(self):
+        """
+        Tests rate_limiter with an invalid rate
+        """
+
 
 if __name__ == '__main__':
     unittest.main()
