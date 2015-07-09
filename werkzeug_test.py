@@ -1,4 +1,4 @@
-from conf import TOKN, EMAIL
+from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
@@ -292,7 +292,7 @@ class TestFormsender(unittest.TestCase):
                                         'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        for i in range(5):
+        for i in range(CEILING - 1):
             app = Forms()
             resp = app.on_form_page(req)
 
@@ -311,7 +311,7 @@ class TestFormsender(unittest.TestCase):
                                         'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        for i in range(50):
+        for i in range(CEILING + 1):
             app = Forms()
             resp = app.on_form_page(req)
 
