@@ -284,7 +284,7 @@ class TestFormsender(unittest.TestCase):
 
     def test_rate_limiter_valid_rate(self):
         """
-        Tests rate_limiter with a valid rate
+        Tests rate limiter with a valid rate
         """
         builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
                                         'email': 'example@osuosl.org',
@@ -299,11 +299,9 @@ class TestFormsender(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(app.error)
 
-
-
     def test_rate_limiter_invalid_rate(self):
         """
-        Tests rate_limiter with an invalid rate
+        Tests rate limiter with an invalid rate
         """
         builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
                                         'email': 'example@osuosl.org',
@@ -314,9 +312,34 @@ class TestFormsender(unittest.TestCase):
         for i in range(CEILING + 1):
             app = Forms()
             resp = app.on_form_page(req)
+            # Avoid duplicate form error
+            req.data['email'] = str(i) + req.data['email']
 
         self.assertEqual(resp.status_code, 429)
         self.assertEqual(app.error, 'Too Many Requests')
+
+    def test_same_submission(self):
+        """
+        Tests that the same form is not sent twice.
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+
+        env = builder.get_environ()
+        req = Request(env)
+
+        app1 = Forms()
+        app2 = Forms()
+
+        resp1 = app1.on_form_page(req)
+        resp2 = app2.on_form_page(req)
+
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIsNone(app1.error)
+        self.assertEqual(resp2.status_code, 403)
+        self.assertEqual(app2.error, 'Forbidden')
 
 
 if __name__ == '__main__':
