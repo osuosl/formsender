@@ -2,7 +2,7 @@ from conf import TOKN, EMAIL
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token)
+                     is_hidden_field_empty, is_valid_token)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
@@ -10,6 +10,7 @@ from werkzeug.test import EnvironBuilder
 from StringIO import StringIO
 from mock import Mock, create_autospec, MagicMock, patch
 from email.mime.text import MIMEText
+from validate_email import validate_email
 
 
 class TestFormsender(unittest.TestCase):
@@ -26,9 +27,9 @@ class TestFormsender(unittest.TestCase):
                                       'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        assert (create_msg(req)['foo'] == builder.form['foo'] and
-               create_msg(req)['file'] == builder.form['file'] and
-               create_msg(req)['test'] == builder.form['test'])
+        self.assertEqual(create_msg(req)['foo'], builder.form['foo'])
+        self.assertEqual(create_msg(req)['file'], builder.form['file'])
+        self.assertEqual(create_msg(req)['test'], builder.form['test'])
 
     def test_create_msg_no_content(self):
         """
@@ -39,7 +40,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={})
         env = builder.get_environ()
         req = Request(env)
-        assert create_msg(req) is None
+        self.assertIsNone(create_msg(req))
 
     def test_create_msg_with_content_get_method(self):
         """
@@ -53,7 +54,7 @@ class TestFormsender(unittest.TestCase):
                                        'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        assert create_msg(req) is None
+        self.assertIsNone(create_msg(req))
 
     def test_send_email(self):
         """
@@ -85,7 +86,8 @@ class TestFormsender(unittest.TestCase):
                                                  EMAIL,
                                                  msg_send.as_string())
 
-    def test_validations_valid_data(self):
+    @patch('request_handler.validate_email')
+    def test_validations_valid_data(self, mock_validate_email):
         """
         Tests the form validation with valid data.
 
@@ -94,14 +96,17 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': 'example@osuosl.org',
+                                       'email': 'mrsj@osuosl.org',
                                        'hidden': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
+
+        mock_validate_email.return_value = True
+
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 200
+        self.assertEqual(resp.status_code, 200)
 
     def test_validations_invalid_name(self):
         """
@@ -120,7 +125,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_validations_invalid_email(self):
         """
@@ -139,7 +144,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_validations_invalid_hidden(self):
         """
@@ -159,7 +164,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_validations_invalid_token(self):
         """
@@ -178,9 +183,10 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
-    def test_is_valid_email_with_valid(self):
+    @patch('request_handler.validate_email')
+    def test_is_valid_email_with_valid(self, mock_validate_email):
         """
         Tests is_valid_email with a valid email
 
@@ -188,10 +194,13 @@ class TestFormsender(unittest.TestCase):
         valid and exists. This function call should return true.
         """
         builder = EnvironBuilder(method='POST',
-                                 data={'email': 'example@osuosl.org'})
+                                 data={'email': 'mrsj@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_email(req)
+
+        mock_validate_email.return_value = True
+
+        self.assertTrue(is_valid_email(req))
 
     def test_is_valid_email_with_invalid(self):
         """
@@ -204,7 +213,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'email': 'nope@example.com'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_email(req) is False
+        self.assertFalse(is_valid_email(req))
 
     def test_validate_name_with_valid(self):
         """
@@ -217,7 +226,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': 'Matthew'})
         env = builder.get_environ()
         req = Request(env)
-        assert validate_name(req)
+        self.assertTrue(validate_name(req))
 
     def test_validate_name_with_invalid(self):
         """
@@ -230,7 +239,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': '  '})
         env = builder.get_environ()
         req = Request(env)
-        assert validate_name(req) is False
+        self.assertFalse(validate_name(req))
 
     def test_is_hidden_field_empty_empty(self):
         """
@@ -242,7 +251,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'hidden': ''})
         env = builder.get_environ()
         req = Request(env)
-        assert is_hidden_field_empty(req)
+        self.assertTrue(is_hidden_field_empty(req))
 
     def test_is_hidden_field_empty_full(self):
         """
@@ -254,7 +263,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'hidden': 'nope'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_hidden_field_empty(req) is False
+        self.assertFalse(is_hidden_field_empty(req))
 
     def test_is_valid_token_valid(self):
         """
@@ -267,7 +276,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_token(req)
+        self.assertTrue(is_valid_token(req))
 
     def test_is_valid_token_invalid(self):
         """
@@ -280,7 +289,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tokn': 'imarobot'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_token(req) is False
+        self.assertFalse(is_valid_token(req))
 
 
 if __name__ == '__main__':
