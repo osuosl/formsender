@@ -1,6 +1,8 @@
 Formsender
 ==========
 
+![travis](https://travis-ci.org/osuosl/formsender.svg?branch=develop)
+
 Sends emails containing the information in a form
 
 To start the application, run `python request_handler.py` or `make run`

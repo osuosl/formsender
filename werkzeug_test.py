@@ -1,8 +1,8 @@
-from conf import TOKN, EMAIL
+from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token)
+                     is_hidden_field_empty, is_valid_token, RateLimiter)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
@@ -26,9 +26,9 @@ class TestFormsender(unittest.TestCase):
                                       'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        assert (create_msg(req)['foo'] == builder.form['foo'] and
-               create_msg(req)['file'] == builder.form['file'] and
-               create_msg(req)['test'] == builder.form['test'])
+        self.assertEqual(create_msg(req)['foo'], builder.form['foo'])
+        self.assertEqual(create_msg(req)['file'], builder.form['file'])
+        self.assertEqual(create_msg(req)['test'], builder.form['test'])
 
     def test_create_msg_no_content(self):
         """
@@ -39,7 +39,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={})
         env = builder.get_environ()
         req = Request(env)
-        assert create_msg(req) is None
+        self.assertIsNone(create_msg(req))
 
     def test_create_msg_with_content_get_method(self):
         """
@@ -53,7 +53,7 @@ class TestFormsender(unittest.TestCase):
                                        'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        assert create_msg(req) is None
+        self.assertIsNone(create_msg(req))
 
     def test_send_email(self):
         """
@@ -101,7 +101,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 200
+        self.assertEqual(resp.status_code, 200)
 
     def test_validations_invalid_name(self):
         """
@@ -120,7 +120,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_validations_invalid_email(self):
         """
@@ -139,7 +139,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_validations_invalid_hidden(self):
         """
@@ -159,7 +159,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_validations_invalid_token(self):
         """
@@ -178,7 +178,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = Forms()
         resp = app.on_form_page(req)
-        assert resp.status_code == 400
+        self.assertEqual(resp.status_code, 400)
 
     def test_is_valid_email_with_valid(self):
         """
@@ -191,7 +191,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'email': 'example@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_email(req)
+        self.assertTrue(is_valid_email(req))
 
     def test_is_valid_email_with_invalid(self):
         """
@@ -204,7 +204,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'email': 'nope@example.com'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_email(req) is False
+        self.assertFalse(is_valid_email(req))
 
     def test_validate_name_with_valid(self):
         """
@@ -217,7 +217,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': 'Matthew'})
         env = builder.get_environ()
         req = Request(env)
-        assert validate_name(req)
+        self.assertTrue(validate_name(req))
 
     def test_validate_name_with_invalid(self):
         """
@@ -230,7 +230,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': '  '})
         env = builder.get_environ()
         req = Request(env)
-        assert validate_name(req) is False
+        self.assertFalse(validate_name(req))
 
     def test_is_hidden_field_empty_empty(self):
         """
@@ -242,7 +242,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'hidden': ''})
         env = builder.get_environ()
         req = Request(env)
-        assert is_hidden_field_empty(req)
+        self.assertTrue(is_hidden_field_empty(req))
 
     def test_is_hidden_field_empty_full(self):
         """
@@ -254,7 +254,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'hidden': 'nope'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_hidden_field_empty(req) is False
+        self.assertFalse(is_hidden_field_empty(req))
 
     def test_is_valid_token_valid(self):
         """
@@ -267,7 +267,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_token(req)
+        self.assertTrue(is_valid_token(req))
 
     def test_is_valid_token_invalid(self):
         """
@@ -280,7 +280,66 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tokn': 'imarobot'})
         env = builder.get_environ()
         req = Request(env)
-        assert is_valid_token(req) is False
+        self.assertFalse(is_valid_token(req))
+
+    def test_rate_limiter_valid_rate(self):
+        """
+        Tests rate limiter with a valid rate
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        for i in range(CEILING - 1):
+            app = Forms()
+            resp = app.on_form_page(req)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(app.error)
+
+    def test_rate_limiter_invalid_rate(self):
+        """
+        Tests rate limiter with an invalid rate
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        for i in range(CEILING + 1):
+            app = Forms()
+            resp = app.on_form_page(req)
+            # Avoid duplicate form error
+            req.data['email'] = str(i) + req.data['email']
+
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(app.error, 'Too Many Requests')
+
+    def test_same_submission(self):
+        """
+        Tests that the same form is not sent twice.
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+
+        env = builder.get_environ()
+        req = Request(env)
+
+        app1 = Forms()
+        app2 = Forms()
+
+        resp1 = app1.on_form_page(req)
+        resp2 = app2.on_form_page(req)
+
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIsNone(app1.error)
+        self.assertEqual(resp2.status_code, 403)
+        self.assertEqual(app2.error, 'Forbidden')
 
 
 if __name__ == '__main__':
