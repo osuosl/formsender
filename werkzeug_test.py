@@ -295,6 +295,8 @@ class TestFormsender(unittest.TestCase):
         for i in range(CEILING - 1):
             app = Forms()
             resp = app.on_form_page(req)
+            # Avoid duplicate form error
+            req.data['email'] = str(i) + req.data['email']
 
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(app.error)
