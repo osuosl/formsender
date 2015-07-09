@@ -2,7 +2,7 @@ from conf import TOKN, EMAIL
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token)
+                     is_hidden_field_empty, is_valid_token, RateLimiter)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
@@ -294,7 +294,10 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         for i in range(5):
             app = Forms()
-            app.on_form_page(req)
+            resp = app.on_form_page(req)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(app.error)
 
 
 
@@ -302,6 +305,18 @@ class TestFormsender(unittest.TestCase):
         """
         Tests rate_limiter with an invalid rate
         """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        for i in range(50):
+            app = Forms()
+            resp = app.on_form_page(req)
+
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(app.error, 'Too Many Requests')
 
 
 if __name__ == '__main__':
