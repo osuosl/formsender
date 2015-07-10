@@ -102,7 +102,7 @@ def create_msg(request):
 def is_valid_email(request):
     valid_email = validate_email(request.form['email'],
                                  check_mx=True,
-                                 verify=False)
+                                 verify=True)
     if valid_email:
         return valid_email
     return False
