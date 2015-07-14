@@ -194,7 +194,7 @@ class TestFormsender(unittest.TestCase):
         valid and exists. This function call should return true.
         """
         builder = EnvironBuilder(method='POST',
-                                 data={'email': 'mrsj@osuosl.org'})
+                                 data={'email': 'example@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
 
