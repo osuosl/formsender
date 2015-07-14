@@ -10,6 +10,7 @@ from werkzeug.test import EnvironBuilder
 from StringIO import StringIO
 from mock import Mock, create_autospec, MagicMock, patch
 from email.mime.text import MIMEText
+from validate_email import validate_email
 
 
 class TestFormsender(unittest.TestCase):
@@ -85,7 +86,8 @@ class TestFormsender(unittest.TestCase):
                                                  EMAIL,
                                                  msg_send.as_string())
 
-    def test_validations_valid_data(self):
+    @patch('request_handler.validate_email')
+    def test_validations_valid_data(self, mock_validate_email):
         """
         Tests the form validation with valid data.
 
@@ -99,6 +101,9 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
+
+        mock_validate_email.return_value = True
+
         app = Forms()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 200)
@@ -180,7 +185,8 @@ class TestFormsender(unittest.TestCase):
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
-    def test_is_valid_email_with_valid(self):
+    @patch('request_handler.validate_email')
+    def test_is_valid_email_with_valid(self, mock_validate_email):
         """
         Tests is_valid_email with a valid email
 
@@ -191,6 +197,9 @@ class TestFormsender(unittest.TestCase):
                                  data={'email': 'example@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
+
+        mock_validate_email.return_value = True
+
         self.assertTrue(is_valid_email(req))
 
     def test_is_valid_email_with_invalid(self):
