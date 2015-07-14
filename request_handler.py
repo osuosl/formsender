@@ -8,8 +8,9 @@ from werkzeug.wsgi import SharedDataMiddleware
 from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
-from conf import EMAIL, TOKN
+from conf import EMAIL, TOKN, CEILING
 from validate_email import validate_email
+from datetime import datetime
 
 #WSGI Application
 class Forms(object):
@@ -67,6 +68,10 @@ class Forms(object):
                 self.error = 'Improper Form Submission'
                 message = None
                 status = 400
+            elif rater.is_rate_violation():
+                self.error = 'Too Many Requests'
+                message = None
+                status = 429
             else:
                 message = create_msg(request)
                 if message:
@@ -80,8 +85,34 @@ class Forms(object):
                                     url=message, status=status)
 
 
+class RateLimiter(object):
+
+    def __init__(self):
+        self.rate = 0
+        self.start_time = datetime.now()
+        self.time_diff = 0
+
+    def set_time_diff(self):
+        time_d = datetime.now() - self.start_time
+        self.time_diff = time_d.seconds
+
+    def increment_rate(self):
+        self.rate += 1;
+
+    def is_rate_violation(self):
+        """
+        False if rate does not violate CEILING in 1 second (no violation)
+        and True otherwise (violation)
+        """
+        self.set_time_diff()
+        if self.time_diff < 1 or self.rate < CEILING:
+            return False
+        return True
+
+
 # Standalone/helper functions
 def create_app(with_static=True):
+    rater.increment_rate()
     app = Forms()
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
@@ -129,5 +160,6 @@ def is_valid_token(request):
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
+    rater = RateLimiter()
     app = create_app()
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
