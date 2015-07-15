@@ -15,10 +15,9 @@ from datetime import datetime
 #WSGI Application
 class Forms(object):
 
-    def __init__(self):
-        global rater
-        rater.increment_rate()
+    def __init__(self, rater):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
+        self.rater = rater
         self.error = None
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
@@ -71,7 +70,7 @@ class Forms(object):
                 self.error = 'Improper Form Submission'
                 message = None
                 status = 400
-            elif rater.is_rate_violation():
+            elif self.rater.is_rate_violation():
                 self.error = 'Too Many Requests'
                 message = None
                 status = 429
@@ -120,7 +119,6 @@ class RateLimiter(object):
     def is_rate_violation(self):
         # False if rate does not violate CEILING in 1 second (no violation)
         # and True otherwise (violation)
-
         self.set_time_diff()
         if self.time_diff < 1 and self.rate > CEILING:
             self.reset_rate()
@@ -130,11 +128,12 @@ class RateLimiter(object):
         return False
 
 # Global RateLimiter object
-rater = RateLimiter();
+
 
 # Standalone/helper functions
 def create_app(with_static=True):
-    app = Forms()
+    rater = RateLimiter();
+    app = Forms(rater)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
@@ -159,13 +158,11 @@ def is_valid_email(request):
         return valid_email
     return False
 
-
 def validate_name(request):
     name = request.form['name']
     if name.strip():
         return True
     return False
-
 
 def is_hidden_field_empty(request):
     if request.form['hidden'] == "":

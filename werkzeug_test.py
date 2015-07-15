@@ -2,7 +2,7 @@ from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                     is_hidden_field_empty, is_valid_token, RateLimiter, rater)
+                     is_hidden_field_empty, is_valid_token, RateLimiter, create_app)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
@@ -80,10 +80,10 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
-        rater.reset_rate()
+        #rater.reset_rate()
 
         # Call send_email and assert sendmail was called correctly
-        real = Forms()
+        real = create_app()
         real.send_email(msg)
         smtplib.SMTP.sendmail.assert_called_with('theform',
                                                  EMAIL,
@@ -106,9 +106,9 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
 
         mock_validate_email.return_value = True
-        rater.reset_rate()
+        #rater.reset_rate()
 
-        app = Forms()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 200)
 
@@ -127,8 +127,8 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        rater.reset_rate()
-        app = Forms()
+        #rater.reset_rate()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -147,8 +147,8 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        rater.reset_rate()
-        app = Forms()
+        #rater.reset_rate()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -168,8 +168,8 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        rater.reset_rate()
-        app = Forms()
+        #rater.reset_rate()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -188,8 +188,8 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': 'evilrobot' })
         env = builder.get_environ()
         req = Request(env)
-        rater.reset_rate()
-        app = Forms()
+        #rater.reset_rate()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -309,11 +309,11 @@ class TestFormsender(unittest.TestCase):
                                         'hidden': '',
                                         'tokn': TOKN })
         mock_validate_email.return_value = True
-        rater.reset_rate()
+        #rater.reset_rate()
         for i in range(CEILING - 1):
             env = builder.get_environ()
             req = Request(env)
-            app = Forms()
+            app = create_app()
             resp = app.on_form_page(req)
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['name']
@@ -331,11 +331,11 @@ class TestFormsender(unittest.TestCase):
                                         'hidden': '',
                                         'tokn': TOKN })
         mock_validate_email.return_value = True
-        rater.reset_rate()
+        #rater.reset_rate()
+        env = builder.get_environ()
+        req = Request(env)
+        app = create_app()
         for i in range(CEILING + 1):
-            env = builder.get_environ()
-            req = Request(env)
-            app = Forms()
             resp = app.on_form_page(req)
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['email']
