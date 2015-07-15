@@ -109,6 +109,7 @@ class RateLimiter(object):
             return False
         return True
 
+rater = RateLimiter();
 
 # Standalone/helper functions
 def create_app(with_static=True):

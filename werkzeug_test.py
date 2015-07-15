@@ -299,13 +299,13 @@ class TestFormsender(unittest.TestCase):
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
                                         'tokn': TOKN })
-        env = builder.get_environ()
-        req = Request(env)
         for i in range(CEILING - 1):
+            env = builder.get_environ()
+            req = Request(env)
             app = Forms()
             resp = app.on_form_page(req)
             # Avoid duplicate form error
-            req.data['email'] = str(i) + req.data['email']
+            builder.form['name'] = str(i) + builder.form['name']
 
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(app.error)
@@ -318,13 +318,13 @@ class TestFormsender(unittest.TestCase):
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
                                         'tokn': TOKN })
-        env = builder.get_environ()
-        req = Request(env)
         for i in range(CEILING + 1):
+            env = builder.get_environ()
+            req = Request(env)
             app = Forms()
             resp = app.on_form_page(req)
             # Avoid duplicate form error
-            req.data['email'] = str(i) + req.data['email']
+            builder.form['name'] = str(i) + builder.form['email']
 
         self.assertEqual(resp.status_code, 429)
         self.assertEqual(app.error, 'Too Many Requests')
