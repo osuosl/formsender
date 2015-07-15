@@ -118,10 +118,9 @@ class RateLimiter(object):
         self.time_diff = 0
 
     def is_rate_violation(self):
-        """
-        False if rate does not violate CEILING in 1 second (no violation)
-        and True otherwise (violation)
-        """
+        # False if rate does not violate CEILING in 1 second (no violation)
+        # and True otherwise (violation)
+
         self.set_time_diff()
         if self.time_diff < 1 and self.rate > CEILING:
             self.reset_rate()
