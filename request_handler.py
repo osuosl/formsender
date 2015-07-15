@@ -89,6 +89,14 @@ class Forms(object):
 
 
 class RateLimiter(object):
+    """Track number of form submissions per second
+
+    __init__
+    set_time_diff
+    increment_rate
+    reset_rate
+    is_rate_violation
+    """
 
     def __init__(self):
         self.rate = 0
@@ -96,6 +104,7 @@ class RateLimiter(object):
         self.time_diff = 0
 
     def set_time_diff(self):
+        # Sets time_diff in seconds
         time_d = datetime.now() - self.start_time
         self.time_diff = time_d.seconds
 
@@ -103,6 +112,7 @@ class RateLimiter(object):
         self.rate += 1;
 
     def reset_rate(self):
+        # Reset rate to initial values
         self.rate = 0
         self.start_time = datetime.now()
         self.time_diff = 0
@@ -120,6 +130,7 @@ class RateLimiter(object):
             self.reset_rate()
         return False
 
+# Global RateLimiter object
 rater = RateLimiter();
 
 # Standalone/helper functions
