@@ -2,7 +2,7 @@ from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                     is_hidden_field_empty, is_valid_token, RateLimiter)
+                     is_hidden_field_empty, is_valid_token, RateLimiter, rater)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
@@ -11,6 +11,7 @@ from StringIO import StringIO
 from mock import Mock, create_autospec, MagicMock, patch
 from email.mime.text import MIMEText
 from validate_email import validate_email
+from datetime import datetime
 
 
 class TestFormsender(unittest.TestCase):
@@ -103,6 +104,8 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
 
         mock_validate_email.return_value = True
+        rater.rate = 0
+        rater.start_time = datetime.now()
 
         app = Forms()
         resp = app.on_form_page(req)

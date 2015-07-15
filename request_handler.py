@@ -16,6 +16,8 @@ from datetime import datetime
 class Forms(object):
 
     def __init__(self):
+        global rater
+        rater.increment_rate()
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.error = None
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
@@ -52,6 +54,7 @@ class Forms(object):
             s.quit()
 
     def on_form_page(self, request):
+        global rater
         self.error = None
         message = None
         status = 200
@@ -105,15 +108,19 @@ class RateLimiter(object):
         and True otherwise (violation)
         """
         self.set_time_diff()
-        if self.time_diff < 1 or self.rate < CEILING:
-            return False
-        return True
+        if self.time_diff < 1 and self.rate > CEILING:
+            self.start_time = datetime.now()
+            self.rate = 0
+            return True
+        elif self.time_diff > 1:
+            self.start_time = datetime.now()
+            self.rate = 0
+        return False
 
 rater = RateLimiter();
 
 # Standalone/helper functions
 def create_app(with_static=True):
-    rater.increment_rate()
     app = Forms()
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
@@ -161,6 +168,5 @@ def is_valid_token(request):
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
-    rater = RateLimiter()
     app = create_app()
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
