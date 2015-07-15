@@ -53,8 +53,8 @@ class Forms(object):
             s.quit()
 
     def on_form_page(self, request):
-        global rater
         self.error = None
+        self.rater.increment_rate()
         message = None
         status = 200
         if request.method == 'POST':
@@ -132,7 +132,7 @@ class RateLimiter(object):
 
 # Standalone/helper functions
 def create_app(with_static=True):
-    rater = RateLimiter();
+    rater = RateLimiter()
     app = Forms(rater)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {

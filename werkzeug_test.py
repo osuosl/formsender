@@ -80,8 +80,6 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
-        #rater.reset_rate()
-
         # Call send_email and assert sendmail was called correctly
         real = create_app()
         real.send_email(msg)
@@ -106,7 +104,6 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
 
         mock_validate_email.return_value = True
-        #rater.reset_rate()
 
         app = create_app()
         resp = app.on_form_page(req)
@@ -127,7 +124,6 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        #rater.reset_rate()
         app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -147,7 +143,6 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        #rater.reset_rate()
         app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -168,7 +163,6 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        #rater.reset_rate()
         app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -188,7 +182,6 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': 'evilrobot' })
         env = builder.get_environ()
         req = Request(env)
-        #rater.reset_rate()
         app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -309,7 +302,6 @@ class TestFormsender(unittest.TestCase):
                                         'hidden': '',
                                         'tokn': TOKN })
         mock_validate_email.return_value = True
-        #rater.reset_rate()
         for i in range(CEILING - 1):
             env = builder.get_environ()
             req = Request(env)
@@ -331,10 +323,10 @@ class TestFormsender(unittest.TestCase):
                                         'hidden': '',
                                         'tokn': TOKN })
         mock_validate_email.return_value = True
-        #rater.reset_rate()
         env = builder.get_environ()
         req = Request(env)
         app = create_app()
+
         for i in range(CEILING + 1):
             resp = app.on_form_page(req)
             # Avoid duplicate form error
