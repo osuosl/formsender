@@ -66,11 +66,11 @@ class Forms(object):
             elif not validate_name(request):
                 self.error = 'Invalid Name'
                 message = None
-                status = 400
+                status = 401
             elif not is_hidden_field_empty(request) or not is_valid_token(request):
                 self.error = 'Improper Form Submission'
                 message = None
-                status = 400
+                status = 402
             elif rater.is_rate_violation():
                 self.error = 'Too Many Requests'
                 message = None
