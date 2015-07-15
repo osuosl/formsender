@@ -2,7 +2,8 @@ from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                     is_hidden_field_empty, is_valid_token, RateLimiter, create_app)
+                             is_hidden_field_empty, is_valid_token, RateLimiter,
+                             create_app)
 from werkzeug.test import Client
 from werkzeug.testapp import test_app
 from werkzeug.wrappers import BaseResponse, Request
