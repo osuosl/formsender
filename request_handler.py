@@ -121,7 +121,6 @@ class RateLimiter(object):
         # and True otherwise (violation)
         self.set_time_diff()
         if self.time_diff < 1 and self.rate > CEILING:
-            self.reset_rate()
             return True
         elif self.time_diff > 1:
             self.reset_rate()

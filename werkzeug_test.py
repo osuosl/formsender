@@ -2,16 +2,11 @@ from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token, RateLimiter,
-                             create_app)
-from werkzeug.test import Client
-from werkzeug.testapp import test_app
-from werkzeug.wrappers import BaseResponse, Request
+                             is_hidden_field_empty, is_valid_token, create_app)
+from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
-from StringIO import StringIO
-from mock import Mock, create_autospec, MagicMock, patch
+from mock import Mock, patch
 from email.mime.text import MIMEText
-from validate_email import validate_email
 from datetime import datetime
 
 
