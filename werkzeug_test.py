@@ -299,7 +299,8 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         self.assertFalse(is_valid_token(req))
 
-    def test_rate_limiter_valid_rate(self):
+    @patch('request_handler.validate_email')
+    def test_rate_limiter_valid_rate(self, mock_validate_email):
         """
         Tests rate limiter with a valid rate
         """
@@ -307,6 +308,7 @@ class TestFormsender(unittest.TestCase):
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
                                         'tokn': TOKN })
+        mock_validate_email.return_value = True
         rater.reset_rate()
         for i in range(CEILING - 1):
             env = builder.get_environ()
@@ -319,7 +321,8 @@ class TestFormsender(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(app.error)
 
-    def test_rate_limiter_invalid_rate(self):
+    @patch('request_handler.validate_email')
+    def test_rate_limiter_invalid_rate(self, mock_validate_email):
         """
         Tests rate limiter with an invalid rate
         """
@@ -327,6 +330,7 @@ class TestFormsender(unittest.TestCase):
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
                                         'tokn': TOKN })
+        mock_validate_email.return_value = True
         rater.reset_rate()
         for i in range(CEILING + 1):
             env = builder.get_environ()
