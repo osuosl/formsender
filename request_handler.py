@@ -102,6 +102,11 @@ class RateLimiter(object):
     def increment_rate(self):
         self.rate += 1;
 
+    def reset_rate(self):
+        self.rate = 0
+        self.start_time = datetime.now()
+        self.time_diff = 0
+
     def is_rate_violation(self):
         """
         False if rate does not violate CEILING in 1 second (no violation)
@@ -109,12 +114,10 @@ class RateLimiter(object):
         """
         self.set_time_diff()
         if self.time_diff < 1 and self.rate > CEILING:
-            self.start_time = datetime.now()
-            self.rate = 0
+            self.reset_rate()
             return True
         elif self.time_diff > 1:
-            self.start_time = datetime.now()
-            self.rate = 0
+            self.reset_rate()
         return False
 
 rater = RateLimiter();

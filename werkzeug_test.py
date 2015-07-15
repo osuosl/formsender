@@ -80,6 +80,8 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
+        rater.reset_rate()
+
         # Call send_email and assert sendmail was called correctly
         real = Forms()
         real.send_email(msg)
@@ -104,8 +106,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
 
         mock_validate_email.return_value = True
-        rater.rate = 0
-        rater.start_time = datetime.now()
+        rater.reset_rate()
 
         app = Forms()
         resp = app.on_form_page(req)
@@ -126,6 +127,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
+        rater.reset_rate()
         app = Forms()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -145,6 +147,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
+        rater.reset_rate()
         app = Forms()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -165,6 +168,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
+        rater.reset_rate()
         app = Forms()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -184,6 +188,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': 'evilrobot' })
         env = builder.get_environ()
         req = Request(env)
+        rater.reset_rate()
         app = Forms()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
@@ -302,6 +307,7 @@ class TestFormsender(unittest.TestCase):
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
                                         'tokn': TOKN })
+        rater.reset_rate()
         for i in range(CEILING - 1):
             env = builder.get_environ()
             req = Request(env)
@@ -321,6 +327,7 @@ class TestFormsender(unittest.TestCase):
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
                                         'tokn': TOKN })
+        rater.reset_rate()
         for i in range(CEILING + 1):
             env = builder.get_environ()
             req = Request(env)
