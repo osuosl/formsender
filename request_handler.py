@@ -31,7 +31,7 @@ class Forms(object):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.rater = rater
         self.error = None
-        # Jinja is a templating engine for python
+        # Initiates jinja environment
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
         # When the browser is pointed at the root of the website, call
@@ -51,6 +51,7 @@ class Forms(object):
         except HTTPException, e:
             return e
 
+    # Starts wsgi_app by creating a Request and Response based on the Request
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
         response = self.dispatch_request(request)
@@ -73,8 +74,7 @@ class Forms(object):
         except:
             s.quit()
 
-    # Renders form if form was previously empty, the successfully emailed page
-    # if not
+    # Checks for valid form data, calls send_email, returns a redirect
     def on_form_page(self, request):
         self.error = None
         self.rater.increment_rate()
@@ -156,6 +156,9 @@ class RateLimiter(object):
 
 
 # Standalone/helper functions
+
+# Initializes RateLimiter (rater) and Forms (app) objects, pass rater to app to
+# keep track of number of submissions per minute
 def create_app(with_static=True):
     rater = RateLimiter()
     app = Forms(rater)
@@ -166,13 +169,12 @@ def create_app(with_static=True):
     return app
 
 # Creates the message to be sent in the email
-# This could use some improvement, as it currently just sends a dict with no
-# formatting. Needs to be made prettier
 def create_msg(request):
     message = dict()
     if request.method == 'POST':
         # Takes the information from the request and puts it into the message
-        # dict
+        # dict. request.form cannot be returned directly because it is a
+        # multidict.
         for key in request.form:
             message[key] = request.form[key]
         # If there is a message, return it, otherwise return None
