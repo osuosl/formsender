@@ -333,7 +333,7 @@ class TestFormsender(unittest.TestCase):
         self.assertEqual(app.error, 'Too Many Requests')
 
     @patch('request_handler.validate_email')
-    def test_redirect_url(self, mock_validate_email):
+    def test_redirect_url_valid_data(self, mock_validate_email):
         """
         Tests the user is redirected to appropriate location
         """
@@ -357,6 +357,113 @@ class TestFormsender(unittest.TestCase):
 
         redirect.assert_called_with('http://www.example.com', code=302)
 
+    @patch('request_handler.validate_email')
+    def test_redirect_url_error_1(self, mock_validate_email):
+        """
+        Tests the user is redirected to appropriate location
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'nope@example.com',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Mock validate email so returns true
+        mock_validate_email.return_value = True
+
+        # Create app and mock redirect
+        app = create_app()
+        redirect = Mock('redirect')
+
+        redirect.assert_called_with(
+                'http://www.example.com?error=2$message=\'Invalid Email\'',
+                code=302)
+
+    @patch('request_handler.validate_email')
+    def test_redirect_url_error_2(self, mock_validate_email):
+        """
+        Tests the user is redirected to appropriate location
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': '',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Mock validate email so returns true
+        mock_validate_email.return_value = True
+
+        # Create app and mock redirect
+        app = create_app()
+        redirect = Mock('redirect')
+
+        redirect.assert_called_with(
+                'http://www.example.com?error=2$message=\'Invalid Name\'',
+                code=302)
+
+    @patch('request_handler.validate_email')
+    def test_redirect_url_error_3(self, mock_validate_email):
+        """
+        Tests the user is redirected to appropriate location
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '!',
+                                       'tokn': 'wrong token' })
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Mock validate email so returns true
+        mock_validate_email.return_value = True
+
+        # Create app and mock redirect
+        app = create_app()
+        redirect = Mock('redirect')
+
+        redirect.assert_called_with(
+                'http://www.example.com?error=3$message=\'Improper Form Submission\'',
+                code=302)
+
+    @patch('request_handler.validate_email')
+    def test_redirect_url_error_4(self, mock_validate_email):
+        """
+        Tests the user is redirected to appropriate location
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Mock validate email so returns true
+        mock_validate_email.return_value = True
+
+        # Create app and mock redirect
+        app = create_app()
+        redirect = Mock('redirect')
+
+        redirect.assert_called_with(
+                'http://www.example.com?error=4$message=\'Too Many Requests\'',
+                code=302)
 
 
 if __name__ == '__main__':
