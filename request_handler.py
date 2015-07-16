@@ -3,12 +3,14 @@ import urlparse
 import smtplib
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.exceptions import HTTPException
 from werkzeug.wsgi import SharedDataMiddleware
 from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
-from conf import EMAIL
+from conf import EMAIL, TOKN, CEILING
+from validate_email import validate_email
+from datetime import datetime
 
 """
 WSGI Application
@@ -18,12 +20,18 @@ application takes the information submitted, formats it into a python
 dictiononary, then emails it to a specified email
 """
 class Forms(object):
+    """
+    This class listens for a form submission, checks that the data is valid, and
+    sends the form data in a formatted message to the email specified in conf.py
+    """
 
-    def __init__(self):
+    def __init__(self, rater):
         # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         # Sets up the environment (I don't know what that means)
         # Jinja is a templating engine for python
+        self.rater = rater
+        self.error = None
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
         # When the browser is pointed at the root of the website, call
@@ -31,11 +39,11 @@ class Forms(object):
         self.url_map = Map([Rule('/', endpoint='form_page')])
 
     # Renders a webpage based on a template
-    def render_template(self, template_name, **context):
-        # Need to figure out what jinja is
+    def render_template(self, template_name, status, **context):
+        # Render template
         t = self.jinja_env.get_template(template_name)
-        # Renders things somehow
-        return Response(t.render(context), mimetype='text/html')
+        # Returns response object with rendered template
+        return Response(t.render(context), mimetype='text/html', status=status)
 
     # Really important. Handles deciding what happens
     def dispatch_request(self, request):
@@ -67,30 +75,92 @@ class Forms(object):
         try:
             s.sendmail('theform', EMAIL, msg_send.as_string())
             s.quit()
-            return True
         except:
             s.quit()
-            return False
 
     # Renders form if form was previously empty, the successfully emailed page
     # if not
     def on_form_page(self, request):
-        error = None
-        # Creates the message to be emailed from the request. Returns either a
-        # message or None
-        message = create_msg(request)
-        # If there is a message, call send email, then display the success page.
-        if message:
-            self.send_email(message)
-            return self.render_template('submitted.html', error=error, url=message)
-        # If there is no message, render the form
-        return self.render_template('index.html', error=error, url=message)
+        self.error = None
+        self.rater.increment_rate()
+        message = None
+        status = 200
+        if request.method == 'POST':
+            if not is_valid_email(request):
+                self.error = 'Invalid Email'
+                message = None
+                status = 400
+            elif not validate_name(request):
+                self.error = 'Invalid Name'
+                message = None
+                status = 400
+            elif not is_hidden_field_empty(request) or not is_valid_token(request):
+                self.error = 'Improper Form Submission'
+                message = None
+                status = 400
+            elif self.rater.is_rate_violation():
+                self.error = 'Too Many Requests'
+                message = None
+                status = 429
+            else:
+                message = create_msg(request)
+                if message:
+                    self.send_email(message)
+                    return self.render_template('submitted.html',
+                                                error=self.error,
+                                                url=message,
+                                                status=status)
+        return self.render_template('index.html',
+                                    error=self.error,
+                                    url=message, status=status)
+
+
+class RateLimiter(object):
+    """Track number of form submissions per second
+
+    __init__
+    set_time_diff
+    increment_rate
+    reset_rate
+    is_rate_violation
+    """
+
+    def __init__(self):
+        self.rate = 0
+        self.start_time = datetime.now()
+        self.time_diff = 0
+
+    def set_time_diff(self):
+        # Sets time_diff in seconds
+        time_d = datetime.now() - self.start_time
+        self.time_diff = time_d.seconds
+
+    def increment_rate(self):
+        self.rate += 1;
+
+    def reset_rate(self):
+        # Reset rate to initial values
+        self.rate = 0
+        self.start_time = datetime.now()
+        self.time_diff = 0
+
+    def is_rate_violation(self):
+        # False if rate does not violate CEILING in 1 second (no violation)
+        # and True otherwise (violation)
+        self.set_time_diff()
+        if self.time_diff < 1 and self.rate > CEILING:
+            return True
+        elif self.time_diff > 1:
+            self.reset_rate()
+        return False
+
 
 
 # Standalone/helper functions
 # This does things that I don't understand
 def create_app(with_static=True):
-    app = Forms()
+    rater = RateLimiter()
+    app = Forms(rater)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
@@ -113,11 +183,35 @@ def create_msg(request):
         return None
     return None
 
+def is_valid_email(request):
+    valid_email = validate_email(request.form['email'],
+                                 check_mx=True,
+                                 verify=True)
+    if valid_email:
+        return valid_email
+    return False
+
+def validate_name(request):
+    name = request.form['name']
+    if name.strip():
+        return True
+    return False
+
+def is_hidden_field_empty(request):
+    if request.form['hidden'] == "":
+        return True
+    return False
+
+def is_valid_token(request):
+    if request.form['tokn'] == TOKN:
+        return True
+    return False
+
 
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
     # Creates the app
     app = create_app()
-    # Starts the listener thingy
+    # Starts the listener
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)

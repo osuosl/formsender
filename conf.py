@@ -2,6 +2,6 @@
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
 
-# The email the form should send its information to
-# This needs to be in utf-8
-EMAIL = u'mrsj@osuosl.org'
+EMAIL = u'email@example.com'
+TOKN = u'1234567890-='
+CEILING = 10
