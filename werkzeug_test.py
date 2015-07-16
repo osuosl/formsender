@@ -5,6 +5,7 @@ from request_handler import (Forms, create_msg, validate_name, is_valid_email,
                              is_hidden_field_empty, is_valid_token, create_app)
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
+from werkzeug.utils import redirect
 from mock import Mock, patch
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -330,6 +331,31 @@ class TestFormsender(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 429)
         self.assertEqual(app.error, 'Too Many Requests')
+
+    @patch('request_handler.validate_email')
+    def test_redirect_url(self, mock_validate_email):
+        """
+        Tests the user is redirected to appropriate location
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Mock validate email so returns true
+        mock_validate_email.return_value = True
+
+        # Create app and mock redirect
+        app = create_app()
+        redirect = Mock('redirect')
+
+        redirect.assert_called_with('http://www.example.com', code=302)
 
 
 
