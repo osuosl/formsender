@@ -1,7 +1,7 @@
 .. _usage:
 
-To Use Formsender
-=================
+How To Use Formsender
+=====================
 
 At the bottom of request_handler.py there is a command called run_simple. The
 first variable is the location of the form, the second is the port. Change those
@@ -24,7 +24,6 @@ In conf.py change the following variables to match your setup:
 .. code-block:: none
 
     make run
-
 
 The app will now wait for the form to be submitted, and will email the
 information submitted to the email specified.

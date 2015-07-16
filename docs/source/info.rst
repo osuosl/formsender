@@ -1,6 +1,6 @@
 .. _info:
 
-information
+Information
 ===========
 
 The formsender app is a simple program that is designed to aid in the collection
