@@ -1,16 +1,13 @@
-from conf import TOKN, EMAIL
+from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token)
-from werkzeug.test import Client
-from werkzeug.testapp import test_app
-from werkzeug.wrappers import BaseResponse, Request
+                             is_hidden_field_empty, is_valid_token, create_app)
+from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
-from StringIO import StringIO
-from mock import Mock, create_autospec, MagicMock, patch
+from mock import Mock, patch
 from email.mime.text import MIMEText
-from validate_email import validate_email
+from datetime import datetime
 
 
 class TestFormsender(unittest.TestCase):
@@ -80,7 +77,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was called correctly
-        real = Forms()
+        real = create_app()
         real.send_email(msg)
         smtplib.SMTP.sendmail.assert_called_with('theform',
                                                  EMAIL,
@@ -104,7 +101,7 @@ class TestFormsender(unittest.TestCase):
 
         mock_validate_email.return_value = True
 
-        app = Forms()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 200)
 
@@ -123,7 +120,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        app = Forms()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -142,7 +139,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        app = Forms()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -162,7 +159,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        app = Forms()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -181,7 +178,7 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': 'evilrobot' })
         env = builder.get_environ()
         req = Request(env)
-        app = Forms()
+        app = create_app()
         resp = app.on_form_page(req)
         self.assertEqual(resp.status_code, 400)
 
@@ -290,6 +287,50 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
         self.assertFalse(is_valid_token(req))
+
+    @patch('request_handler.validate_email')
+    def test_rate_limiter_valid_rate(self, mock_validate_email):
+        """
+        Tests rate limiter with a valid rate
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+        mock_validate_email.return_value = True
+        for i in range(CEILING - 1):
+            env = builder.get_environ()
+            req = Request(env)
+            app = create_app()
+            resp = app.on_form_page(req)
+            # Avoid duplicate form error
+            builder.form['name'] = str(i) + builder.form['name']
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(app.error)
+
+    @patch('request_handler.validate_email')
+    def test_rate_limiter_invalid_rate(self, mock_validate_email):
+        """
+        Tests rate limiter with an invalid rate
+        """
+        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
+                                        'email': 'example@osuosl.org',
+                                        'hidden': '',
+                                        'tokn': TOKN })
+        mock_validate_email.return_value = True
+        env = builder.get_environ()
+        req = Request(env)
+        app = create_app()
+
+        for i in range(CEILING + 1):
+            resp = app.on_form_page(req)
+            # Avoid duplicate form error
+            builder.form['name'] = str(i) + builder.form['email']
+
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(app.error, 'Too Many Requests')
+
 
 
 if __name__ == '__main__':
