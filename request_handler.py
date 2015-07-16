@@ -28,10 +28,9 @@ class Forms(object):
     def __init__(self, rater):
         # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
-        # Sets up the environment (I don't know what that means)
-        # Jinja is a templating engine for python
         self.rater = rater
         self.error = None
+        # Initiates jinja environment
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
         # When the browser is pointed at the root of the website, call
@@ -54,13 +53,12 @@ class Forms(object):
         except HTTPException, e:
             return e
 
-    # This starts the app. I think
+    # Starts wsgi_app by creating a Request and Response based on the Request
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
         response = self.dispatch_request(request)
         return response(environ, start_response)
 
-    # Calls something. This is important but I don't know why
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
 
@@ -68,7 +66,7 @@ class Forms(object):
     def send_email(self, msg):
         # Format the message
         msg_send = MIMEText(str(msg))
-        # Sets up a temporary mail server to send from (I think)
+        # Sets up a temporary mail server to send from
         s = smtplib.SMTP('localhost')
         # Attempts to send the mail to EMAIL, with the message formatted as a
         # string
@@ -78,8 +76,7 @@ class Forms(object):
         except:
             s.quit()
 
-    # Renders form if form was previously empty, the successfully emailed page
-    # if not
+    # Checks for valid form data, calls send_email, returns a redirect
     def on_form_page(self, request):
         self.error = None
         self.rater.increment_rate()
@@ -157,7 +154,9 @@ class RateLimiter(object):
 
 
 # Standalone/helper functions
-# This does things that I don't understand
+
+# Initializes RateLimiter (rater) and Forms (app) objects, pass rater to app to
+# keep track of number of submissions per minute
 def create_app(with_static=True):
     rater = RateLimiter()
     app = Forms(rater)
@@ -168,13 +167,12 @@ def create_app(with_static=True):
     return app
 
 # Creates the message to be sent in the email
-# This could use some improvement, as it currently just sends a dict with no
-# formatting. Needs to be made prettier
 def create_msg(request):
     message = dict()
     if request.method == 'POST':
         # Takes the information from the request and puts it into the message
-        # dict
+        # dict. request.form cannot be returned directly because it is a
+        # multidict.
         for key in request.form:
             message[key] = request.form[key]
         # If there is a message, return it, otherwise return None
