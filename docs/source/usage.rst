@@ -21,6 +21,8 @@ In conf.py change the following variables to match your setup:
 * ``CEILING`` is the maximum number of submit requests formsender will accept
   per second.
 
+To start the application:
+
 .. code-block:: none
 
     make run
