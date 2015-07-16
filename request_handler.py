@@ -3,7 +3,7 @@ import urlparse
 import smtplib
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.exceptions import HTTPException
 from werkzeug.wsgi import SharedDataMiddleware
 from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
@@ -14,6 +14,10 @@ from datetime import datetime
 
 #WSGI Application
 class Forms(object):
+    """
+    This class listens for a form submission, checks that the data is valid, and
+    sends the form data in a formatted message to the email specified in conf.py
+    """
 
     def __init__(self, rater):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
