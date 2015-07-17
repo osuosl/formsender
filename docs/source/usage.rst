@@ -21,11 +21,12 @@ In conf.py change the following variables to match your setup:
 * ``CEILING`` is the maximum number of submit requests formsender will accept
   per second.
 
-To start the application:
+To run the application locally for development purposes:
 
 .. code-block:: none
 
     make run
 
-The app will now wait for the form to be submitted, and will email the
-information submitted to the email specified.
+The app will now wait at ``localhost:5000`` for the form to be submitted, and
+will email the information submitted to the email specified. You can navigate to
+``localhost:5000`` to see a simple test form.
