@@ -1,11 +1,11 @@
 from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
+import werkzeug
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
                              is_hidden_field_empty, is_valid_token, create_app)
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
-from werkzeug.utils import redirect
 from mock import Mock, patch
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -96,15 +96,16 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'hidden': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
 
         mock_validate_email.return_value = True
 
         app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(resp.status_code, 200)
+        app.on_form_page(req)
+        self.assertIsNone(app.error)
 
     def test_validations_invalid_name(self):
         """
@@ -118,12 +119,13 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': '   ',
                                        'email': 'example@osuosl.org',
                                        'hidden': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
         app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(resp.status_code, 400)
+        app.on_form_page(req)
+        self.assertEqual(app.error, 'Invalid Name')
 
     def test_validations_invalid_email(self):
         """
@@ -137,12 +139,13 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'invalid@example.com',
                                        'hidden': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
         app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(resp.status_code, 400)
+        app.on_form_page(req)
+        self.assertEqual(app.error, 'Invalid Email')
 
     def test_validations_invalid_hidden(self):
         """
@@ -156,13 +159,14 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
-                                       'hidden': 'r',
-                                       'tokn': TOKN })
+                                       'hidden': '!',
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
         app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(resp.status_code, 400)
+        app.on_form_page(req)
+        self.assertEqual(app.error, 'Improper Form Submission')
 
     def test_validations_invalid_token(self):
         """
@@ -176,12 +180,13 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'hidden': '',
-                                       'tokn': 'evilrobot' })
+                                       'tokn': 'evilrobot',
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
         app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(resp.status_code, 400)
+        app.on_form_page(req)
+        self.assertEqual(app.error, 'Improper Form Submission')
 
     @patch('request_handler.validate_email')
     def test_is_valid_email_with_valid(self, mock_validate_email):
@@ -297,7 +302,8 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
-                                        'tokn': TOKN })
+                                        'tokn': TOKN,
+                                        'redirect': 'http://www.example.com' })
         mock_validate_email.return_value = True
         for i in range(CEILING - 1):
             env = builder.get_environ()
@@ -307,7 +313,7 @@ class TestFormsender(unittest.TestCase):
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['name']
 
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 302)
         self.assertIsNone(app.error)
 
     @patch('request_handler.validate_email')
@@ -318,7 +324,8 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
                                         'email': 'example@osuosl.org',
                                         'hidden': '',
-                                        'tokn': TOKN })
+                                        'tokn': TOKN,
+                                        'redirect': 'http://www.example.com' })
         mock_validate_email.return_value = True
         env = builder.get_environ()
         req = Request(env)
@@ -329,7 +336,6 @@ class TestFormsender(unittest.TestCase):
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['email']
 
-        self.assertEqual(resp.status_code, 429)
         self.assertEqual(app.error, 'Too Many Requests')
 
     @patch('request_handler.validate_email')
@@ -353,9 +359,11 @@ class TestFormsender(unittest.TestCase):
 
         # Create app and mock redirect
         app = create_app()
-        redirect = Mock('redirect')
+        werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        resp = app.on_form_page(req)
 
-        redirect.assert_called_with('http://www.example.com', code=302)
+        werkzeug.utils.redirect.assert_called_with('http://www.example.com',
+                                                   code=302)
 
     @patch('request_handler.validate_email')
     def test_redirect_url_error_1(self, mock_validate_email):
@@ -374,14 +382,15 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
 
         # Mock validate email so returns true
-        mock_validate_email.return_value = True
+        mock_validate_email.return_value = False
 
         # Create app and mock redirect
         app = create_app()
-        redirect = Mock('redirect')
+        werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        app.on_form_page(req)
 
-        redirect.assert_called_with(
-                'http://www.example.com?error=2&message=\'Invalid Email\'',
+        werkzeug.utils.redirect.assert_called_with(
+                'http://www.example.com?error=1&message=\'Invalid Email\'',
                 code=302)
 
     @patch('request_handler.validate_email')
@@ -405,9 +414,10 @@ class TestFormsender(unittest.TestCase):
 
         # Create app and mock redirect
         app = create_app()
-        redirect = Mock('redirect')
+        werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        app.on_form_page(req)
 
-        redirect.assert_called_with(
+        werkzeug.utils.redirect.assert_called_with(
                 'http://www.example.com?error=2&message=\'Invalid Name\'',
                 code=302)
 
@@ -432,11 +442,12 @@ class TestFormsender(unittest.TestCase):
 
         # Create app and mock redirect
         app = create_app()
-        redirect = Mock('redirect')
+        werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        app.on_form_page(req)
 
-        redirect.assert_called_with(
-                'http://www.example.com?error=3&message=\'Improper Form Submission\'',
-                code=302)
+        werkzeug.utils.redirect.assert_called_with(
+          'http://www.example.com?error=3&message=\'Improper Form Submission\'',
+          code=302)
 
     @patch('request_handler.validate_email')
     def test_redirect_url_error_4(self, mock_validate_email):
@@ -456,12 +467,15 @@ class TestFormsender(unittest.TestCase):
 
         # Mock validate email so returns true
         mock_validate_email.return_value = True
-
-        # Create app and mock redirect
         app = create_app()
-        redirect = Mock('redirect')
+        werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        # Create app and mock redirect
+        for i in range(CEILING + 1):
+            resp = app.on_form_page(req)
+            # Avoid duplicate form error
+            builder.form['name'] = str(i) + builder.form['name']
 
-        redirect.assert_called_with(
+        werkzeug.utils.redirect.assert_called_with(
                 'http://www.example.com?error=4&message=\'Too Many Requests\'',
                 code=302)
 
