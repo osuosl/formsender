@@ -398,7 +398,7 @@ class TestFormsender(unittest.TestCase):
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-                'http://www.example.com?error=1&message=\'Invalid Email\'',
+                'http://www.example.com?error=1&message=Invalid+Email',
                 code=302)
 
     @patch('request_handler.validate_email')
@@ -426,7 +426,7 @@ class TestFormsender(unittest.TestCase):
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-                'http://www.example.com?error=2&message=\'Invalid Name\'',
+                'http://www.example.com?error=2&message=Invalid+Name',
                 code=302)
 
     @patch('request_handler.validate_email')
@@ -454,7 +454,7 @@ class TestFormsender(unittest.TestCase):
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-          'http://www.example.com?error=3&message=\'Improper Form Submission\'',
+          'http://www.example.com?error=3&message=Improper+Form+Submission',
           code=302)
 
     @patch('request_handler.validate_email')
@@ -484,7 +484,7 @@ class TestFormsender(unittest.TestCase):
             builder.form['name'] = str(i) + builder.form['name']
 
         werkzeug.utils.redirect.assert_called_with(
-                'http://www.example.com?error=4&message=\'Too Many Requests\'',
+                'http://www.example.com?error=4&message=Too+Many+Requests',
                 code=302)
 
 
