@@ -107,7 +107,8 @@ class TestFormsender(unittest.TestCase):
         app.on_form_page(req)
         self.assertIsNone(app.error)
 
-    def test_validations_invalid_name(self):
+    @patch('request_handler.validate_email')
+    def test_validations_invalid_name(self, mock_validate_email):
         """
         Tests the form validation with an invalid name.
 
@@ -123,11 +124,13 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        mock_validate_email.return_value = True
         app = create_app()
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Name')
 
-    def test_validations_invalid_email(self):
+    @patch('request_handler.validate_email')
+    def test_validations_invalid_email(self, mock_validate_email):
         """
         Tests the form validation with an invalid email.
 
@@ -143,11 +146,13 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        mock_validate_email.return_value = False
         app = create_app()
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Email')
 
-    def test_validations_invalid_hidden(self):
+    @patch('request_handler.validate_email')
+    def test_validations_invalid_hidden(self, mock_validate_email):
         """
         Tests the form validation with content in the hidden field.
 
@@ -164,11 +169,13 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        mock_validate_email.return_value = True
         app = create_app()
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
-    def test_validations_invalid_token(self):
+    @patch('request_handler.validate_email')
+    def test_validations_invalid_token(self, mock_validate_email):
         """
         Tests the form validation with an invalid token.
 
@@ -184,6 +191,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        mock_validate_email.return_value = True
         app = create_app()
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
