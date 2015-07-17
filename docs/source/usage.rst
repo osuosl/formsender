@@ -3,9 +3,6 @@
 How To Use Formsender
 =====================
 
-At the bottom of request_handler.py there is a command called run_simple. The
-first variable is the location of the form, the second is the port. Change those
-two variables to match your setup.
 
 In conf.py change the following variables to match your setup:
 
@@ -30,3 +27,9 @@ To run the application locally for development purposes:
 The app will now wait at ``localhost:5000`` for the form to be submitted, and
 will email the information submitted to the email specified. You can navigate to
 ``localhost:5000`` to see a simple test form.
+
+If you want to make changes to the local development setup, there is a command
+called run_simple at the bottom of request_handler.py. The first variable is the
+location of the listener (set to ``127.0.0.1``, or ``localhost``), the second is
+the port (set to ``5000``). These two variables can be changed to match your
+desired setup.
