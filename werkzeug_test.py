@@ -486,7 +486,6 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
-        # Create app and mock redirect
         for i in range(CEILING + 1):
             resp = app.on_form_page(req)
             # Avoid duplicate form error
