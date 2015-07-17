@@ -90,8 +90,9 @@ class Forms(object):
             return werkzeug.utils.redirect(error_url, code=302)
         # Renders test form on localhost
         return self.render_template('index.html',
-                               error=self.error,
-                               url=message, status=200)
+                                    error=self.error,
+                                    url=message,
+                                    status=200)
 
 
 
