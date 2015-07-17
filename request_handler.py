@@ -40,9 +40,12 @@ class Forms(object):
 
     # Renders a webpage based on a template
     def render_template(self, template_name, status, **context):
+        # Render template
         t = self.jinja_env.get_template(template_name)
+        # Returns response object with rendered template
         return Response(t.render(context), mimetype='text/html', status=status)
 
+    # Really important. Handles deciding what happens
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
         try:
@@ -221,5 +224,5 @@ if __name__ == '__main__':
     from werkzeug.serving import run_simple
     # Creates the app
     app = create_app()
-    # Starts the listener thingy
+    # Starts the listener
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
