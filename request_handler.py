@@ -13,7 +13,13 @@ from conf import EMAIL, TOKN, CEILING
 from validate_email import validate_email
 from datetime import datetime
 
-#WSGI Application
+"""
+WSGI Application
+
+This application listens to a form. When the form is submitted, this
+application takes the information submitted, formats it into a python
+dictiononary, then emails it to a specified email
+"""
 class Forms(object):
     """
     This class listens for a form submission, checks that the data is valid, and
@@ -21,17 +27,25 @@ class Forms(object):
     """
 
     def __init__(self, rater):
+        # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.rater = rater
         self.error = None
+        # Initiates jinja environment
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
                                      autoescape=True)
+        # When the browser is pointed at the root of the website, call
+        # on_form_page
         self.url_map = Map([Rule('/', endpoint='form_page')])
 
+    # Renders a webpage based on a template
     def render_template(self, template_name, status, **context):
+        # Render template
         t = self.jinja_env.get_template(template_name)
+        # Returns response object with rendered template
         return Response(t.render(context), mimetype='text/html', status=status)
 
+    # Really important. Handles deciding what happens
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
         try:
@@ -40,6 +54,7 @@ class Forms(object):
         except HTTPException, e:
             return e
 
+    # Starts wsgi_app by creating a Request and Response based on the Request
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
         response = self.dispatch_request(request)
@@ -48,15 +63,21 @@ class Forms(object):
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
 
+    # Sets up and sends the email
     def send_email(self, msg):
+        # Format the message
         msg_send = MIMEText(str(msg))
+        # Sets up a temporary mail server to send from
         s = smtplib.SMTP('localhost')
+        # Attempts to send the mail to EMAIL, with the message formatted as a
+        # string
         try:
             s.sendmail('theform', EMAIL, msg_send.as_string())
             s.quit()
         except:
             s.quit()
 
+    # Checks for valid form data, calls send_email, returns a redirect
     def on_form_page(self, request):
         self.error = None
         self.rater.increment_rate()
@@ -135,10 +156,12 @@ class RateLimiter(object):
             self.reset_rate()
         return False
 
-# Global RateLimiter object
 
 
 # Standalone/helper functions
+
+# Initializes RateLimiter (rater) and Forms (app) objects, pass rater to app to
+# keep track of number of submissions per minute
 def create_app(with_static=True):
     rater = RateLimiter()
     app = Forms(rater)
@@ -148,11 +171,16 @@ def create_app(with_static=True):
         })
     return app
 
+# Creates the message to be sent in the email
 def create_msg(request):
     message = dict()
     if request.method == 'POST':
+        # Takes the information from the request and puts it into the message
+        # dict. request.form cannot be returned directly because it is a
+        # multidict.
         for key in request.form:
             message[key] = request.form[key]
+        # If there is a message, return it, otherwise return None
         if message:
             return message
         return None
@@ -194,5 +222,7 @@ def create_error_url(error_number, message, request):
 # Application logic
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
+    # Creates the app
     app = create_app()
+    # Starts the listener
     run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
