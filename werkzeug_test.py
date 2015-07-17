@@ -74,7 +74,7 @@ class TestFormsender(unittest.TestCase):
         msg = create_msg(req)
         msg_send = MIMEText(str(msg))
 
-        # Mock sendmail function
+        # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was called correctly
@@ -100,7 +100,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
-
+        # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
 
         app = create_app()
@@ -124,6 +124,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
         app.on_form_page(req)
@@ -146,6 +147,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        # Mock external validate_email so returns false in Travis
         mock_validate_email.return_value = False
         app = create_app()
         app.on_form_page(req)
@@ -169,6 +171,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
         app.on_form_page(req)
@@ -191,6 +194,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
+        # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
         app.on_form_page(req)
@@ -208,7 +212,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'email': 'example@osuosl.org'})
         env = builder.get_environ()
         req = Request(env)
-
+        # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
 
         self.assertTrue(is_valid_email(req))
@@ -312,6 +316,7 @@ class TestFormsender(unittest.TestCase):
                                         'hidden': '',
                                         'tokn': TOKN,
                                         'redirect': 'http://www.example.com' })
+        # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         for i in range(CEILING - 1):
             env = builder.get_environ()
@@ -334,6 +339,7 @@ class TestFormsender(unittest.TestCase):
                                         'hidden': '',
                                         'tokn': TOKN,
                                         'redirect': 'http://www.example.com' })
+        # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         env = builder.get_environ()
         req = Request(env)
@@ -362,7 +368,7 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
 
-        # Mock validate email so returns true
+        # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
 
         # Create app and mock redirect
@@ -389,7 +395,10 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
 
-        # Mock validate email so returns true
+        # Mock validate email so returns false in Travis
+        # Not technically necessary because this will return false in Travis
+        # regardless since it can't find the SMTP server, but kept here for
+        # consistency
         mock_validate_email.return_value = False
 
         # Create app and mock redirect
@@ -417,7 +426,7 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
 
-        # Mock validate email so returns true
+        # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
 
         # Create app and mock redirect
@@ -445,7 +454,7 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
 
-        # Mock validate email so returns true
+        # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
 
         # Create app and mock redirect
@@ -473,7 +482,7 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
 
-        # Mock validate email so returns true
+        # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
