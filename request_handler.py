@@ -1,11 +1,12 @@
 import os
 import urlparse
 import smtplib
+import werkzeug
+import urllib
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
 from werkzeug.wsgi import SharedDataMiddleware
-from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from conf import EMAIL, TOKN, CEILING
@@ -60,35 +61,38 @@ class Forms(object):
         self.error = None
         self.rater.increment_rate()
         message = None
-        status = 200
+        error_number = 0
         if request.method == 'POST':
             if not is_valid_email(request):
                 self.error = 'Invalid Email'
                 message = None
-                status = 400
+                error_number = 1
             elif not validate_name(request):
                 self.error = 'Invalid Name'
                 message = None
-                status = 400
-            elif not is_hidden_field_empty(request) or not is_valid_token(request):
+                error_number = 2
+            elif (not is_hidden_field_empty(request)
+                  or not is_valid_token(request)):
                 self.error = 'Improper Form Submission'
                 message = None
-                status = 400
+                error_number = 3
             elif self.rater.is_rate_violation():
                 self.error = 'Too Many Requests'
                 message = None
-                status = 429
+                error_number = 4
             else:
                 message = create_msg(request)
                 if message:
                     self.send_email(message)
-                    return self.render_template('submitted.html',
-                                                error=self.error,
-                                                url=message,
-                                                status=status)
+                    redirect_url = request.form['redirect']
+                    return werkzeug.utils.redirect(redirect_url, code=302)
+            error_url = create_error_url(error_number, self.error, request)
+            return werkzeug.utils.redirect(error_url, code=302)
+        # Renders test form on localhost
         return self.render_template('index.html',
-                                    error=self.error,
-                                    url=message, status=status)
+                               error=self.error,
+                               url=message, status=200)
+
 
 
 class RateLimiter(object):
@@ -176,6 +180,14 @@ def is_valid_token(request):
     if request.form['tokn'] == TOKN:
         return True
     return False
+
+# Construct error message and append to redirect url
+def create_error_url(error_number, message, request):
+    values = [('error', str(error_number)), ('message', message)]
+    query = urllib.urlencode(values)
+    return request.form['redirect'] + '?' + query
+
+
 
 
 # Application logic
