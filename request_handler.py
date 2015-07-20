@@ -216,7 +216,11 @@ def create_error_url(error_number, message, request):
     query = urllib.urlencode(values)
     return request.form['redirect'] + '?' + query
 
-
+def format_message(message):
+    formatted_message = ''
+    for key in message:
+        formatted_message += key + ': ' + message[key] + '\n'
+    return formatted_message
 
 
 # Application logic
