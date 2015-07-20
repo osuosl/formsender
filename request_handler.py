@@ -105,7 +105,7 @@ class Forms(object):
                 message = create_msg(request)
                 if message:
                     self.send_email(message)
-                    redirect_url = request.form['redirect']
+                    redirect_url = message['redirect']
                     return werkzeug.utils.redirect(redirect_url, code=302)
             error_url = create_error_url(error_number, self.error, request)
             return werkzeug.utils.redirect(error_url, code=302)
