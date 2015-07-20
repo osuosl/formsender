@@ -218,8 +218,11 @@ def create_error_url(error_number, message, request):
 
 def format_message(message):
     formatted_message = ''
-    for key in message:
-        formatted_message += key + ': ' + message[key] + '\n'
+    for key in sorted(message):
+        if (key is not 'redirect' and
+            key is not 'hidden' and
+            key is not 'tokn'):
+            formatted_message += key + ': ' + message[key] + '\n'
     return formatted_message
 
 
