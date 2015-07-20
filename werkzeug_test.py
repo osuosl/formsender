@@ -104,6 +104,8 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
 
         app = create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
         self.assertIsNone(app.error)
 
@@ -127,6 +129,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Name')
 
@@ -150,6 +154,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns false in Travis
         mock_validate_email.return_value = False
         app = create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Email')
 
@@ -174,6 +180,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -197,6 +205,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -318,6 +328,8 @@ class TestFormsender(unittest.TestCase):
                                         'redirect': 'http://www.example.com' })
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         for i in range(CEILING - 1):
             env = builder.get_environ()
             req = Request(env)
@@ -344,7 +356,8 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
         app = create_app()
-
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         for i in range(CEILING + 1):
             resp = app.on_form_page(req)
             # Avoid duplicate form error
@@ -374,6 +387,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         resp = app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with('http://www.example.com',
@@ -404,6 +419,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -432,6 +449,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -460,6 +479,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -486,6 +507,8 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         app = create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         for i in range(CEILING + 1):
             resp = app.on_form_page(req)
             # Avoid duplicate form error
