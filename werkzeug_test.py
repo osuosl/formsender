@@ -528,9 +528,8 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(req.form['redirect'], 'www.example.com')
+        message = create_msg(req)
+        self.assertEqual(message['redirect'], 'www.example.com')
 
     def test_strip_incoming_redirect_no_query(self):
         # Build test environment
@@ -542,9 +541,8 @@ class TestFormsender(unittest.TestCase):
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        app = create_app()
-        resp = app.on_form_page(req)
-        self.assertEqual(req.form['redirect'], builder.form['redirect'])
+        message = create_msg(req)
+        self.assertEqual(message['redirect'], builder.form['redirect'])
 
 
 
