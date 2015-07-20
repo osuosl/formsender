@@ -105,7 +105,7 @@ class Forms(object):
             else:
                 message = create_msg(request)
                 if message:
-                    self.send_email(message)
+                    self.send_email(format_message(message))
                     redirect_url = message['redirect']
                     return werkzeug.utils.redirect(redirect_url, code=302)
             error_url = create_error_url(error_number, self.error, request)
@@ -221,6 +221,13 @@ def create_error_url(error_number, message, request):
 def strip_query(url):
     return url.split('?', 1)[0]
 
+def format_message(msg):
+    hidden_fields = ['redirect', 'hidden', 'tokn', 'op', 'name', 'email']
+    f_message = 'NAME:   {0}\nEMAIL:   {1}\n'.format(msg['name'], msg['email'])
+    for key in sorted(msg):
+        if key not in hidden_fields:
+            f_message.append('{0}:   {1}}\n'.format(key, msg[key]))
+    return f_message
 
 
 # Application logic
