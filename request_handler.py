@@ -221,6 +221,11 @@ def create_error_url(error_number, message, request):
 def strip_query(url):
     return url.split('?', 1)[0]
 
+def format_message(message):
+    formatted_message = ''
+    for key in message:
+        formatted_message += key + ': ' + message[key] + '\n'
+    return formatted_message
 
 
 # Application logic
