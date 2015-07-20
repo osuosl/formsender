@@ -3,6 +3,7 @@ import urlparse
 import smtplib
 import werkzeug
 import urllib
+import re
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -218,14 +219,7 @@ def create_error_url(error_number, message, request):
     return request.form['redirect'] + '?' + query
 
 def strip_query(url):
-    flag = False
-    new_url = ''
-    for i in range(len(url)):
-        if url[i] == '?':
-            flag = True
-        elif not flag:
-            new_url += url[i]
-    return new_url
+    return url.split('?', 1)[0]
 
 
 
