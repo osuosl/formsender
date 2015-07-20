@@ -22,7 +22,8 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'foo' : 'this is some text',
                                       'file': 'my file contents',
-                                      'test': 'test.txt'})
+                                      'test': 'test.txt',
+                                      'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
         self.assertEqual(create_msg(req)['foo'], builder.form['foo'])
@@ -66,7 +67,8 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'hidden': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
 

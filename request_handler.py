@@ -182,6 +182,7 @@ def create_msg(request):
             message[key] = request.form[key]
         # If there is a message, return it, otherwise return None
         if message:
+            message['redirect'] = strip_query(message['redirect'])
             return message
         return None
     return None
@@ -216,6 +217,15 @@ def create_error_url(error_number, message, request):
     query = urllib.urlencode(values)
     return request.form['redirect'] + '?' + query
 
+def strip_query(url):
+    flag = False
+    new_url = ''
+    for i in range(len(url)):
+        if url[i] == '?':
+            flag = True
+        elif not flag:
+            new_url += url[i]
+    return new_url
 
 
 
