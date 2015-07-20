@@ -3,7 +3,8 @@ import smtplib
 import unittest
 import werkzeug
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token, create_app)
+                             is_hidden_field_empty, is_valid_token, create_app,
+                             format_message)
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
@@ -545,6 +546,21 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         message = create_msg(req)
         self.assertEqual(message['redirect'], builder.form['redirect'])
+
+    def test_format_message(self):
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        target_message = 'NAME:   Valid Guy\nEMAIL:   example@osuosl.org\n'
+        message = create_msg(req)
+        formatted_message = format_message(message)
+        self.assertEqual(formatted_message, target_message)
 
 
 
