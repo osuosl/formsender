@@ -696,6 +696,54 @@ class TestFormsender(unittest.TestCase):
         mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'Form')
 
+    def test_same_submission(self):
+        """
+        Tests that the same form is not sent twice.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '',
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com'})
+
+        env = builder.get_environ()
+
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+
+        # Create apps
+        app1 = create_app()
+        app2 = create_app()
+        app3 = create_app()
+        app4 = create_app()
+
+        # Will cause a duplicate with resp4 because
+        # resp1.name = 'Valid Guy' = resp4.name
+        req = Request(env)
+        resp1 = app1.on_form_page(req)
+
+        # Update name so not a duplicate
+        builder.form['name'] = 'Another Guy'
+        req = Request(env)
+        resp2 = app2.on_form_page(req)
+
+        # Update name so not a duplicate
+        builder.form['name'] = 'A Third Guy'
+        req = Request(env)
+        resp3 = app3.on_form_page(req)
+
+        # Duplicate with resp1 because
+        # resp1.name = 'Valid Guy' = resp4.name
+        builder.form['name'] = 'Valid Guy'
+        req = Request(env)
+        resp4 = app4.on_form_page(req)
+
+        self.assertIsNone(app1.error)
+        self.assertIsNone(app2.error)
+        self.assertIsNone(app3.error)
+        self.assertEqual(app4.error, 'Duplicate Request')
+
 
 if __name__ == '__main__':
     unittest.main()
