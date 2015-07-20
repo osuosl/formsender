@@ -224,11 +224,9 @@ def strip_query(url):
 def format_message(message):
     formatted_message = 'NAME:   ' + message['name'] + '\n'
     formatted_message += 'EMAIL:   ' + message['email'] + '\n'
+    hidden_fields = ['redirect', 'hidden', 'tokn', 'op', 'name', 'email']
     for key in sorted(message):
-        if (key != 'redirect' and key != 'hidden' and
-            key != 'tokn' and key != 'hidden' and
-            key != 'op' and key != 'name' and
-            key != 'email'):
+        if key not in hidden_fields:
             formatted_message += key + ':   ' + message[key] + '\n'
     return formatted_message
 
