@@ -495,6 +495,35 @@ class TestFormsender(unittest.TestCase):
                 'http://www.example.com?error=4&message=Too+Many+Requests',
                 code=302)
 
+    def test_strip_incoming_redirect_query(self):
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'www.example.com?mal=param',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        app = create_app()
+        resp = app.on_form_page(req)
+        self.assertEqual(req.form['redirect'], 'www.example.com')
+
+    def test_strip_incoming_redirect_no_query(self):
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        app = create_app()
+        resp = app.on_form_page(req)
+        self.assertEqual(req.form['redirect'], builder.form['redirect'])
+
+
 
 if __name__ == '__main__':
     unittest.main()
