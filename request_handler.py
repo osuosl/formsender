@@ -3,6 +3,7 @@ import urlparse
 import smtplib
 import werkzeug
 import urllib
+import re
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -105,7 +106,7 @@ class Forms(object):
                 message = create_msg(request)
                 if message:
                     self.send_email(message)
-                    redirect_url = request.form['redirect']
+                    redirect_url = message['redirect']
                     return werkzeug.utils.redirect(redirect_url, code=302)
             error_url = create_error_url(error_number, self.error, request)
             return werkzeug.utils.redirect(error_url, code=302)
@@ -182,6 +183,7 @@ def create_msg(request):
             message[key] = request.form[key]
         # If there is a message, return it, otherwise return None
         if message:
+            message['redirect'] = strip_query(message['redirect'])
             return message
         return None
     return None
@@ -216,6 +218,8 @@ def create_error_url(error_number, message, request):
     query = urllib.urlencode(values)
     return request.form['redirect'] + '?' + query
 
+def strip_query(url):
+    return url.split('?', 1)[0]
 
 
 

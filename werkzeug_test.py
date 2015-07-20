@@ -22,7 +22,8 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'foo' : 'this is some text',
                                       'file': 'my file contents',
-                                      'test': 'test.txt'})
+                                      'test': 'test.txt',
+                                      'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
         self.assertEqual(create_msg(req)['foo'], builder.form['foo'])
@@ -66,7 +67,8 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'hidden': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com' })
         env = builder.get_environ()
         req = Request(env)
 
@@ -517,6 +519,33 @@ class TestFormsender(unittest.TestCase):
         werkzeug.utils.redirect.assert_called_with(
                 'http://www.example.com?error=4&message=Too+Many+Requests',
                 code=302)
+
+    def test_strip_incoming_redirect_query(self):
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'www.example.com?mal=param',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        message = create_msg(req)
+        self.assertEqual(message['redirect'], 'www.example.com')
+
+    def test_strip_incoming_redirect_no_query(self):
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        message = create_msg(req)
+        self.assertEqual(message['redirect'], builder.form['redirect'])
+
 
 
 if __name__ == '__main__':
