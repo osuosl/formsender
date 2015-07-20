@@ -221,14 +221,13 @@ def create_error_url(error_number, message, request):
 def strip_query(url):
     return url.split('?', 1)[0]
 
-def format_message(message):
-    formatted_message = 'NAME:   ' + message['name'] + '\n'
-    formatted_message += 'EMAIL:   ' + message['email'] + '\n'
+def format_message(msg):
     hidden_fields = ['redirect', 'hidden', 'tokn', 'op', 'name', 'email']
-    for key in sorted(message):
+    f_message = 'NAME:   {0}\nEMAIL:   {1}\n'.format(msg['name'], msg['email'])
+    for key in sorted(msg):
         if key not in hidden_fields:
-            formatted_message += key + ':   ' + message[key] + '\n'
-    return formatted_message
+            f_message.append('{0}:   {1}}\n'.format(key, msg[key]))
+    return f_message
 
 
 # Application logic
