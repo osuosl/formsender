@@ -226,7 +226,7 @@ def format_message(msg):
     f_message = 'NAME:   {0}\nEMAIL:   {1}\n'.format(msg['name'], msg['email'])
     for key in sorted(msg):
         if key not in hidden_fields:
-            f_message.append('{0}:   {1}}\n'.format(key, msg[key]))
+            f_message += ('{0}:   {1}\n'.format(key, msg[key]))
     return f_message
 
 
