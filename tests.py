@@ -552,12 +552,23 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
+                                       'some_field': ("This is multi line and "
+                                                      "should not be on the "
+                                                      "same line as the title"),
                                        'redirect': 'http://www.example.com',
                                        'hidden': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
-        target_message = 'NAME:   Valid Guy\nEMAIL:   example@osuosl.org\n'
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Some Field:\n\n"
+                          "This is multi line and should not be on the same "
+                          "line as the title.\n\n")
         message = create_msg(req)
         formatted_message = format_message(message)
         self.assertEqual(formatted_message, target_message)
