@@ -200,6 +200,8 @@ def create_msg(request):
         return None
     return None
 
+# Check that email server exists at request.form['email']
+# return the email if it is valid, False if not
 def is_valid_email(request):
     valid_email = validate_email(request.form['email'],
                                  check_mx=True,
@@ -208,17 +210,21 @@ def is_valid_email(request):
         return valid_email
     return False
 
+# Make sure request has a 'name' field with more than just spaces
+# return stripped name if true, False if not
 def validate_name(request):
     name = request.form['name']
     if name.strip():
         return True
     return False
 
+# Make sure hidden 'last_name' field is empty, return True or False
 def is_hidden_field_empty(request):
     if request.form['last_name'] == "":
         return True
     return False
 
+# Make sure request's 'tokn' field matches TOKN in conf.py
 def is_valid_token(request):
     if request.form['tokn'] == TOKN:
         return True
@@ -230,9 +236,11 @@ def create_error_url(error_number, message, request):
     query = urllib.urlencode(values)
     return request.form['redirect'] + '?' + query
 
+# Remove query string from a url
 def strip_query(url):
     return url.split('?', 1)[0]
 
+# Formats a dict (msg) into a nice-looking string
 def format_message(msg):
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'tokn', 'op',
@@ -250,10 +258,12 @@ def format_message(msg):
                                                    msg[key]))
     return f_message
 
+# Replace underscores with spaces and convert to title case
 def convert_key_to_title(snake_case_key):
-    # Replace underscores with spaces and convert to title case
     return snake_case_key.replace('_', ' ').title()
 
+# Returns a string to be used as a subject in an email
+# Default is 'Form Submission'
 def set_mail_subject(message):
     # If key exists in the message dict and has content return the content
     if 'mail_subject' in message and message['mail_subject']:
@@ -261,6 +271,8 @@ def set_mail_subject(message):
     # Otherwise return default
     return 'Form Submission'
 
+# Returns a string to be used in the 'from' field in an email
+# Default is 'Form'
 def set_mail_from(message):
     # If key exists in the message dict and has content return the content
     if 'mail_from' in message and message['mail_from']:
@@ -269,7 +281,7 @@ def set_mail_from(message):
     return 'Form'
 
 
-# Application logic
+# Start application
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
     # Creates the app
