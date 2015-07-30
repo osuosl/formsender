@@ -206,7 +206,7 @@ def validate_name(request):
     return False
 
 def is_hidden_field_empty(request):
-    if request.form['hidden'] == "":
+    if request.form['last_name'] == "":
         return True
     return False
 
@@ -226,8 +226,8 @@ def strip_query(url):
 
 def format_message(msg):
     # Ignore these fields when writing to formatted message
-    hidden_fields = ['redirect', 'hidden', 'tokn', 'op',
-                     'name', 'email', 'mail_subject']
+    hidden_fields = ['redirect', 'last_name', 'tokn', 'op',
+                     'name', 'email', 'mail_subject', 'mail_from']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"

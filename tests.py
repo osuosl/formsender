@@ -67,7 +67,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN,
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
@@ -101,7 +101,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN,
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
@@ -127,7 +127,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': '   ',
                                        'email': 'example@osuosl.org',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN,
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
@@ -152,7 +152,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'invalid@example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN,
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
@@ -168,17 +168,17 @@ class TestFormsender(unittest.TestCase):
     @patch('request_handler.validate_email')
     def test_validations_invalid_hidden(self, mock_validate_email):
         """
-        Tests the form validation with content in the hidden field.
+        Tests the form validation with content in the hidden last_name field.
 
         on_form_page checks for valid fields in submitted form and
         returns an error message if an invalid field is found.
-        Content in the hidden field causes an 'Improper Form Submission'
-        error.
+        Content in the hidden last_name field causes an 'Improper Form
+        Submission' error.
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
-                                       'hidden': '!',
+                                       'last_name': '!',
                                        'tokn': TOKN,
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
@@ -203,7 +203,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': 'evilrobot',
                                        'redirect': 'http://www.example.com' })
         env = builder.get_environ()
@@ -274,24 +274,24 @@ class TestFormsender(unittest.TestCase):
 
     def test_is_hidden_field_empty_empty(self):
         """
-        Tests is_hidden_field_empty with 'hidden' field empty
+        Tests is_hidden_field_empty with 'last_name' field empty
 
-        is_hidden_field_empty checks that the hidden field in the form
+        is_hidden_field_empty checks that the last_name field in the form
         is empty. This function call should return true.
         """
-        builder = EnvironBuilder(method='POST', data={'hidden': ''})
+        builder = EnvironBuilder(method='POST', data={'last_name': ''})
         env = builder.get_environ()
         req = Request(env)
         self.assertTrue(is_hidden_field_empty(req))
 
     def test_is_hidden_field_empty_full(self):
         """
-        Tests is_hidden_field_empty with contents in 'hidden' field
+        Tests is_hidden_field_empty with contents in 'last_name' field
 
-        is_hidden_field_empty checks that the hidden field in the form
+        is_hidden_field_empty checks that the last_name field in the form
         is empty. This function call should return false.
         """
-        builder = EnvironBuilder(method='POST', data={'hidden': 'nope'})
+        builder = EnvironBuilder(method='POST', data={'last_name': 'nope'})
         env = builder.get_environ()
         req = Request(env)
         self.assertFalse(is_hidden_field_empty(req))
@@ -329,7 +329,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
                                         'email': 'example@osuosl.org',
-                                        'hidden': '',
+                                        'last_name': '',
                                         'tokn': TOKN,
                                         'redirect': 'http://www.example.com' })
         # Mock validate email so returns true in Travis
@@ -354,7 +354,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
                                         'email': 'example@osuosl.org',
-                                        'hidden': '',
+                                        'last_name': '',
                                         'tokn': TOKN,
                                         'redirect': 'http://www.example.com' })
         # Mock validate email so returns true in Travis
@@ -382,7 +382,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -411,7 +411,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'nope@example.com',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -444,7 +444,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': '',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -474,7 +474,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '!',
+                                       'last_name': '!',
                                        'tokn': 'wrong token' })
         env = builder.get_environ()
         req = Request(env)
@@ -504,7 +504,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -530,7 +530,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'www.example.com?mal=param',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -543,7 +543,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -559,7 +559,7 @@ class TestFormsender(unittest.TestCase):
                                                       "should not be on the "
                                                       "same line as the title"),
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -587,7 +587,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'mail_subject': 'Test Form',
                                        'tokn': TOKN })
         env = builder.get_environ()
@@ -608,7 +608,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -628,7 +628,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'mail_subject': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
@@ -648,7 +648,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'mail_from': 'Test Form at example.com',
                                        'tokn': TOKN })
         env = builder.get_environ()
@@ -668,7 +668,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'tokn': TOKN })
         env = builder.get_environ()
         req = Request(env)
@@ -687,7 +687,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'name': 'Valid Guy',
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
-                                       'hidden': '',
+                                       'last_name': '',
                                        'mail_from': '',
                                        'tokn': TOKN })
         env = builder.get_environ()

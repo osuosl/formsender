@@ -27,16 +27,17 @@ Include required fields by setting the ``name`` property to the following:
 
     example: ``<input type="text" name="name" value="" size="60" maxlength="128" />``
 
-* **hidden** - must be empty, must be hidden
+* **last_name** - not for an actual last name field. Must be empty, must be
+  hidden
 
-    example: ``<input type="hidden" name="hidden" value=""/>``
+    example: ``<input type="hidden" name="last_name" value=""/>``
 
 * **tokn** - contents must match TOKN in conf.py, must be hidden
 
     example: ``<input type="hidden" name="tokn" value="1234567890-=" />``
 
 * **redirect** - url to redirect to on form submission, if an error occurs a
-  query string will be added with an error message.
+  query string will be added with an error message. Should be hidden.
 
     example: ``<input type="hidden" name="redirect" value="http://www.example.com" />``
 
