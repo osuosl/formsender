@@ -58,6 +58,7 @@ These optional fields are:
 
     sets outgoing email ``From`` field to mail_from's contents. If mail_from is
     not included, the subject will default to ``Form``. This should be a hidden
-    field.
+    field. This field **must not** contain spaces. Everything following a space
+    is ignored when sending the email.
 
-    example: ``<input type="hidden" name="mail_from" value="My Test Form" />``
+    example: ``<input type="hidden" name="mail_from" value="My_Test_Form" />``

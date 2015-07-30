@@ -65,16 +65,16 @@ class Forms(object):
         return self.wsgi_app(environ, start_response)
 
     # Sets up and sends the email
-    def send_email(self, msg):
+    def send_email(self, msg, email_from, subject):
         # Format the message and set the subject
         msg_send = MIMEText(str(msg))
-        msg_send['Subject'] = set_mail_subject(msg)
+        msg_send['Subject'] = subject
         # Sets up a temporary mail server to send from
         s = smtplib.SMTP('localhost')
         # Attempts to send the mail to EMAIL, with the message formatted as a
         # string
         try:
-            s.sendmail(set_mail_from(msg), EMAIL, msg_send.as_string())
+            s.sendmail(email_from, EMAIL, msg_send.as_string())
             s.quit()
         except:
             s.quit()
@@ -106,7 +106,9 @@ class Forms(object):
             else:
                 message = create_msg(request)
                 if message:
-                    self.send_email(format_message(message))
+                    self.send_email(format_message(message),
+                                    set_mail_from(message),
+                                    set_mail_subject(message))
                     redirect_url = message['redirect']
                     return werkzeug.utils.redirect(redirect_url, code=302)
             error_url = create_error_url(error_number, self.error, request)
