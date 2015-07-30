@@ -68,12 +68,13 @@ class Forms(object):
     def send_email(self, msg):
         # Format the message
         msg_send = MIMEText(str(msg))
+        msg_send['Subject'] = set_mail_subject(msg)
         # Sets up a temporary mail server to send from
         s = smtplib.SMTP('localhost')
         # Attempts to send the mail to EMAIL, with the message formatted as a
         # string
         try:
-            s.sendmail('theform', EMAIL, msg_send.as_string())
+            s.sendmail(set_mail_from(msg), EMAIL, msg_send.as_string())
             s.quit()
         except:
             s.quit()
@@ -243,10 +244,14 @@ def convert_key_to_title(snake_case_key):
     return snake_case_key.replace('_', ' ').title()
 
 def set_mail_subject(message):
-    pass
+    if 'mail_subject' in message and message['mail_subject']:
+        return message['mail_subject']
+    return 'Form Submission'
 
 def set_mail_from(message):
-    pass
+    if 'mail_from' in message and message['mail_from']:
+        return message['mail_from']
+    return 'Form'
 
 
 # Application logic

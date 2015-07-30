@@ -76,6 +76,7 @@ class TestFormsender(unittest.TestCase):
         # Construct message for assertion
         msg = create_msg(req)
         msg_send = MIMEText(str(msg))
+        msg_send['Subject'] = set_mail_subject(msg)
 
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -83,7 +84,7 @@ class TestFormsender(unittest.TestCase):
         # Call send_email and assert sendmail was called correctly
         real = create_app()
         real.send_email(msg)
-        smtplib.SMTP.sendmail.assert_called_with('theform',
+        smtplib.SMTP.sendmail.assert_called_with(set_mail_from(msg),
                                                  EMAIL,
                                                  msg_send.as_string())
 
