@@ -245,6 +245,9 @@ def convert_key_to_title(snake_case_key):
 def set_mail_subject(message):
     pass
 
+def set_mail_from(message):
+    pass
+
 
 # Application logic
 if __name__ == '__main__':

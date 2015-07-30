@@ -4,7 +4,7 @@ import unittest
 import werkzeug
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
                              is_hidden_field_empty, is_valid_token, create_app,
-                             format_message, set_mail_subject)
+                             format_message, set_mail_subject, set_mail_from)
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
@@ -634,6 +634,66 @@ class TestFormsender(unittest.TestCase):
         message = create_msg(req)
         subject = set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
+
+    def test_set_mail_from_with_from(self):
+        """
+        set_mail_from(message) returns the string in message['mail_from'] when
+        it is present, otherwise it returns 'Form'
+        """
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'mail_from': 'Test Form at example.com',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = create_msg(req)
+        mail_from = set_mail_from(message)
+        self.assertEqual(mail_from, 'Test Form at example.com')
+
+    def test_set_mail_from_with_nothing(self):
+        """
+        set_mail_from(message) returns the string in message['mail_from'] when
+        it is present, otherwise it returns 'Form'
+        """
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = create_msg(req)
+        mail_from = set_mail_from(message)
+        self.assertEqual(mail_from, 'Form')
+
+    def test_set_mail_from_with_key_only(self):
+        """
+        set_mail_from(message) returns the string in message['mail_from'] when
+        it is present, otherwise it returns 'Form'
+        """
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'hidden': '',
+                                       'mail_from': '',
+                                       'tokn': TOKN })
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = create_msg(req)
+        mail_from = set_mail_from(message)
+        self.assertEqual(mail_from, 'Form')
+
 
 
 
