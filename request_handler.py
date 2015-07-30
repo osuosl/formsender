@@ -242,6 +242,8 @@ def convert_key_to_title(snake_case_key):
     # Replace underscores with spaces and convert to title case
     return snake_case_key.replace('_', ' ').title()
 
+def set_mail_subject(message):
+    pass
 
 
 # Application logic
