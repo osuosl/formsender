@@ -39,14 +39,7 @@ class Forms(object):
         # on_form_page
         self.url_map = Map([Rule('/', endpoint='form_page')])
 
-    # Renders a webpage based on a template
-    def render_template(self, template_name, status, **context):
-        # Render template
-        t = self.jinja_env.get_template(template_name)
-        # Returns response object with rendered template
-        return Response(t.render(context), mimetype='text/html', status=status)
-
-    # Really important. Handles deciding what happens
+    # Evaluates request to decide what happens
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
         try:
@@ -81,43 +74,59 @@ class Forms(object):
 
     # Checks for valid form data, calls send_email, returns a redirect
     def on_form_page(self, request):
-        self.error = None
+        # Increment rate because we received a request
         self.rater.increment_rate()
-        message = None
+        self.error = None
         error_number = 0
-        if request.method == 'POST':
-            if not is_valid_email(request):
-                self.error = 'Invalid Email'
-                message = None
-                error_number = 1
-            elif not validate_name(request):
-                self.error = 'Invalid Name'
-                message = None
-                error_number = 2
-            elif (not is_hidden_field_empty(request)
-                  or not is_valid_token(request)):
-                self.error = 'Improper Form Submission'
-                message = None
-                error_number = 3
-            elif self.rater.is_rate_violation():
-                self.error = 'Too Many Requests'
-                message = None
-                error_number = 4
-            else:
-                message = create_msg(request)
-                if message:
-                    self.send_email(format_message(message),
-                                    set_mail_from(message),
-                                    set_mail_subject(message))
-                    redirect_url = message['redirect']
-                    return werkzeug.utils.redirect(redirect_url, code=302)
-            error_url = create_error_url(error_number, self.error, request)
-            return werkzeug.utils.redirect(error_url, code=302)
-        # Renders test form on localhost
-        return self.render_template('index.html',
-                                    error=self.error,
-                                    url=message,
-                                    status=200)
+
+        if request.method == 'POST' and self.are_fields_invalid(request):
+            # Error was found
+            error_number = self.are_fields_invalid(request)
+            return self.handle_error(request, error_number)
+        elif request.method == 'POST':
+            # No errors
+            return self.handle_no_error(request)
+        else:
+            # Renders error message locally if sent GET request
+            t = self.jinja_env.get_template('error.html')
+            return Response(t.render(), mimetype='text/html', status=400)
+
+    def are_fields_invalid(self, request):
+        # Sends request to each error function and returns first error it sees
+        if not is_valid_email(request):
+            self.error = 'Invalid Email'
+            error_number = 1
+        elif not validate_name(request):
+            self.error = 'Invalid Name'
+            error_number = 2
+        elif (not is_hidden_field_empty(request)
+              or not is_valid_token(request)):
+            self.error = 'Improper Form Submission'
+            error_number = 3
+        elif self.rater.is_rate_violation():
+            self.error = 'Too Many Requests'
+            error_number = 4
+        else:
+            # If nothing above is true, there is no error
+            return False;
+        # There is an error if it got this far
+        return error_number
+
+    def handle_no_error(self, request):
+        # Creates a message and sends an email with no error,
+        # then redirects to provided redirect url
+        message = create_msg(request)
+        if message:
+            self.send_email(format_message(message),
+                            set_mail_from(message),
+                            set_mail_subject(message))
+            redirect_url = message['redirect']
+            return werkzeug.utils.redirect(redirect_url, code=302)
+
+    def handle_error(self, request, error_number):
+        # Creates error url and redirects with error query
+        error_url = create_error_url(error_number, self.error, request)
+        return werkzeug.utils.redirect(error_url, code=302)
 
 
 
