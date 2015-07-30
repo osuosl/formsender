@@ -66,7 +66,7 @@ class Forms(object):
 
     # Sets up and sends the email
     def send_email(self, msg):
-        # Format the message
+        # Format the message and set the subject
         msg_send = MIMEText(str(msg))
         msg_send['Subject'] = set_mail_subject(msg)
         # Sets up a temporary mail server to send from
@@ -244,13 +244,17 @@ def convert_key_to_title(snake_case_key):
     return snake_case_key.replace('_', ' ').title()
 
 def set_mail_subject(message):
+    # If key exists in the message dict and has content return the content
     if 'mail_subject' in message and message['mail_subject']:
         return message['mail_subject']
+    # Otherwise return default
     return 'Form Submission'
 
 def set_mail_from(message):
+    # If key exists in the message dict and has content return the content
     if 'mail_from' in message and message['mail_from']:
         return message['mail_from']
+    # Otherwise return default
     return 'Form'
 
 
