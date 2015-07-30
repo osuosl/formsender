@@ -568,7 +568,7 @@ class TestFormsender(unittest.TestCase):
                           "------------\n"
                           "Some Field:\n\n"
                           "This is multi line and should not be on the same "
-                          "line as the title.\n\n")
+                          "line as the title\n\n")
         message = create_msg(req)
         formatted_message = format_message(message)
         self.assertEqual(formatted_message, target_message)
