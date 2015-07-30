@@ -222,12 +222,26 @@ def strip_query(url):
     return url.split('?', 1)[0]
 
 def format_message(msg):
-    hidden_fields = ['redirect', 'hidden', 'tokn', 'op', 'name', 'email']
-    f_message = 'NAME:   {0}\nEMAIL:   {1}\n'.format(msg['name'], msg['email'])
+    # Ignore these fields when writing to formatted message
+    hidden_fields = ['redirect', 'hidden', 'tokn', 'op',
+                     'name', 'email', 'mail_subject']
+    # Contact information goes at the top
+    f_message = ("Contact:\n--------\n"
+                 "NAME:   {0}\nEMAIL:   {1}\n"
+                 "\nInformation:\n------------\n"
+                 .format(msg['name'], msg['email']))
+    # Write each formatted key in title case and corresponding message to
+    # f_message, each key and message is separated by two lines.
     for key in sorted(msg):
         if key not in hidden_fields:
-            f_message.append('{0}:   {1}}\n'.format(key, msg[key]))
+            f_message += ('{0}:\n\n{1}\n\n'.format(convert_key_to_title(key),
+                                                   msg[key]))
     return f_message
+
+def convert_key_to_title(snake_case_key):
+    # Replace underscores with spaces and convert to title case
+    return snake_case_key.replace('_', ' ').title()
+
 
 
 # Application logic

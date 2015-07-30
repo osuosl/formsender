@@ -16,4 +16,4 @@ clean:
 	      rm *.pyc
 
 tests:
-	      $(PY) werkzeug_test.py
+	      $(PY) tests.py
