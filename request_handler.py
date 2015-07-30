@@ -10,9 +10,9 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.wsgi import SharedDataMiddleware
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
-from conf import EMAIL, TOKN, CEILING
 from validate_email import validate_email
 from datetime import datetime
+from conf import EMAIL, TOKN, CEILING
 
 """
 WSGI Application

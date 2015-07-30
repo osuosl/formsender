@@ -1,15 +1,15 @@
-from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 import werkzeug
-from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token, create_app,
-                             format_message, set_mail_subject, set_mail_from)
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
 from email.mime.text import MIMEText
 from datetime import datetime
+from conf import TOKN, EMAIL, CEILING
+from request_handler import (Forms, create_msg, validate_name, is_valid_email,
+                             is_hidden_field_empty, is_valid_token, create_app,
+                             format_message, set_mail_subject, set_mail_from)
 
 
 class TestFormsender(unittest.TestCase):
