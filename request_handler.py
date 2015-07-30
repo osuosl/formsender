@@ -65,15 +65,16 @@ class Forms(object):
         return self.wsgi_app(environ, start_response)
 
     # Sets up and sends the email
-    def send_email(self, msg):
-        # Format the message
+    def send_email(self, msg, email_from, subject):
+        # Format the message and set the subject
         msg_send = MIMEText(str(msg))
+        msg_send['Subject'] = subject
         # Sets up a temporary mail server to send from
         s = smtplib.SMTP('localhost')
         # Attempts to send the mail to EMAIL, with the message formatted as a
         # string
         try:
-            s.sendmail('theform', EMAIL, msg_send.as_string())
+            s.sendmail(email_from, EMAIL, msg_send.as_string())
             s.quit()
         except:
             s.quit()
@@ -105,7 +106,9 @@ class Forms(object):
             else:
                 message = create_msg(request)
                 if message:
-                    self.send_email(format_message(message))
+                    self.send_email(format_message(message),
+                                    set_mail_from(message),
+                                    set_mail_subject(message))
                     redirect_url = message['redirect']
                     return werkzeug.utils.redirect(redirect_url, code=302)
             error_url = create_error_url(error_number, self.error, request)
@@ -242,6 +245,19 @@ def convert_key_to_title(snake_case_key):
     # Replace underscores with spaces and convert to title case
     return snake_case_key.replace('_', ' ').title()
 
+def set_mail_subject(message):
+    # If key exists in the message dict and has content return the content
+    if 'mail_subject' in message and message['mail_subject']:
+        return message['mail_subject']
+    # Otherwise return default
+    return 'Form Submission'
+
+def set_mail_from(message):
+    # If key exists in the message dict and has content return the content
+    if 'mail_from' in message and message['mail_from']:
+        return message['mail_from']
+    # Otherwise return default
+    return 'Form'
 
 
 # Application logic
