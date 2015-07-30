@@ -91,6 +91,8 @@ class Forms(object):
             t = self.jinja_env.get_template('error.html')
             return Response(t.render(), mimetype='text/html', status=400)
 
+    # If a field in the request is invalid, sets the error message and returns
+    # the error number, returns False if fields are valid
     def are_fields_invalid(self, request):
         # Sends request to each error function and returns first error it sees
         if not is_valid_email(request):
@@ -112,9 +114,9 @@ class Forms(object):
         # There is an error if it got this far
         return error_number
 
+    # Creates a message and sends an email with no error, then redirects to
+    # provided redirect url
     def handle_no_error(self, request):
-        # Creates a message and sends an email with no error,
-        # then redirects to provided redirect url
         message = create_msg(request)
         if message:
             self.send_email(format_message(message),
@@ -123,8 +125,8 @@ class Forms(object):
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
 
+    # Creates error url and redirects with error query
     def handle_error(self, request, error_number):
-        # Creates error url and redirects with error query
         error_url = create_error_url(error_number, self.error, request)
         return werkzeug.utils.redirect(error_url, code=302)
 
@@ -145,23 +147,23 @@ class RateLimiter(object):
         self.start_time = datetime.now()
         self.time_diff = 0
 
+    # Sets time_diff in seconds
     def set_time_diff(self):
-        # Sets time_diff in seconds
         time_d = datetime.now() - self.start_time
         self.time_diff = time_d.seconds
 
     def increment_rate(self):
         self.rate += 1;
 
+    # Reset rate to initial values
     def reset_rate(self):
-        # Reset rate to initial values
         self.rate = 0
         self.start_time = datetime.now()
         self.time_diff = 0
 
+    # Returns False if rate does not violate CEILING in 1 second (no violation)
+    # and True otherwise (violation)
     def is_rate_violation(self):
-        # False if rate does not violate CEILING in 1 second (no violation)
-        # and True otherwise (violation)
         self.set_time_diff()
         if self.time_diff < 1 and self.rate > CEILING:
             return True
