@@ -10,6 +10,7 @@ import os
 import smtplib
 import werkzeug
 import urllib
+import hashlib
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -95,6 +96,9 @@ class Forms(object):
         elif self.rater.is_rate_violation():
             self.error = 'Too Many Requests'
             error_number = 4
+        elif self.rater.is_duplicate(create_msg(request)):
+            self.error = 'Duplicate Request'
+            error_number = 5
         else:
             # If nothing above is true, there is no error
             return False
@@ -141,6 +145,9 @@ class RateLimiter(object):
         self.rate = 0
         self.start_time = datetime.now()
         self.time_diff = 0
+        self.hash_list = []
+        self.start_time_hash = datetime.now()
+        self.time_diff_hash = 0
 
     def set_time_diff(self):
         """Sets time_diff in seconds"""
@@ -167,6 +174,45 @@ class RateLimiter(object):
             return True
         elif self.time_diff > 1:
             self.reset_rate()
+        return False
+
+    def is_duplicate(self, submission):
+        """Calculates a hash from a submission and adds it to the hash list"""
+        sub_hash = hashlib.sha512()
+        sub_hash.update(str(submission))
+        sub_hash = sub_hash.hexdigest()
+        if not self.check_time_diff_hash():
+            return self.check_for_duplicate_hash(sub_hash)
+        return False
+
+    def check_time_diff_hash(self):
+        """Checks time_diff_hash for a value greater than one hour"""
+        self.set_time_diff_hash()
+        if self.time_diff_hash > (3600): # 60 seconds * 60 minutes
+            self.reset_hash()
+            return True
+        return False
+
+    def set_time_diff_hash(self):
+        """Sets time_diff in seconds"""
+        time_d = datetime.now() - self.start_time_hash
+        self.time_diff_hash = time_d.seconds
+
+    def reset_hash(self):
+        """Resets hash_list and hash_times"""
+        self.hash_list = []
+        self.time_diff_hash = 0
+        self.start_time_hash = datetime.now()
+
+    def check_for_duplicate_hash(self, sub_hash):
+        """
+        Checks for a duplicate hash in hash_list
+        Returns True if there is a duplicate and False otherwise
+        """
+        for index, element in enumerate(self.hash_list):
+            if sub_hash == self.hash_list[index]:
+                return True
+        self.hash_list.append(sub_hash)
         return False
 
 
