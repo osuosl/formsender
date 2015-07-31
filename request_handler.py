@@ -65,10 +65,9 @@ class Forms(object):
         # Increment rate because we received a request
         self.rater.increment_rate()
         self.error = None
-        error_number = 0
-        if request.method == 'POST' and self.are_fields_invalid(request):
+        error_number = self.are_fields_invalid(request)
+        if request.method == 'POST' and error_number:
             # Error was found
-            error_number = self.are_fields_invalid(request)
             return self.handle_error(request, error_number)
         elif request.method == 'POST':
             # No errors
