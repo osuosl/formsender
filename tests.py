@@ -696,7 +696,8 @@ class TestFormsender(unittest.TestCase):
         mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'Form')
 
-    def test_same_submission(self):
+    @patch('request_handler.validate_email')
+    def test_same_submission(self, mock_validate_email):
         """
         Tests that the same form is not sent twice.
         """
@@ -711,6 +712,7 @@ class TestFormsender(unittest.TestCase):
 
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        mock_validate_email.return_value = True
 
         # Create apps
         app1 = handler.create_app()
