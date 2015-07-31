@@ -284,7 +284,7 @@ def set_mail_subject(message):
 def set_mail_from(message):
     """
     Returns a string to be used in the 'from' field in an email
-    # Default is 'Form'
+    Default is 'Form'
     """
     # If key exists in the message dict and has content return the content
     if 'mail_from' in message and message['mail_from']:
