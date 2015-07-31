@@ -78,7 +78,6 @@ class Forms(object):
         self.rater.increment_rate()
         self.error = None
         error_number = 0
-
         if request.method == 'POST' and self.are_fields_invalid(request):
             # Error was found
             error_number = self.are_fields_invalid(request)
@@ -88,8 +87,8 @@ class Forms(object):
             return self.handle_no_error(request)
         else:
             # Renders error message locally if sent GET request
-            t = self.jinja_env.get_template('error.html')
-            return Response(t.render(), mimetype='text/html', status=400)
+            return error_redirect()
+
 
     # If a field in the request is invalid, sets the error message and returns
     # the error number, returns False if fields are valid
@@ -124,6 +123,8 @@ class Forms(object):
                             set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
+        else:
+            return error_redirect()
 
     # Creates error url and redirects with error query
     def handle_error(self, request, error_number):
@@ -133,7 +134,8 @@ class Forms(object):
 
 
 class RateLimiter(object):
-    """Track number of form submissions per second
+    """
+    Track number of form submissions per second
 
     __init__
     set_time_diff
@@ -281,6 +283,10 @@ def set_mail_from(message):
         return message['mail_from']
     # Otherwise return default
     return 'Form'
+
+def error_redirect(self):
+    t = self.jinja_env.get_template('error.html')
+    return Response(t.render(), mimetype='text/html', status=400)
 
 
 # Start application

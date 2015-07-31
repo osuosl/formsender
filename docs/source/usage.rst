@@ -27,7 +27,8 @@ To run the application locally for development purposes:
 The app will now wait at ``localhost:5000`` for the form to be submitted, and
 will email the information submitted to the email specified.
 
-There is a command called run_simple at the bottom of request_handler.py. The
-first argument is the location of the listener (set to ``127.0.0.1``, or
-``localhost``), the second is the port (set to ``5000``). These two arguments
-can be changed to match your desired setup.
+You can change the host and port Formsender waits at by modifying the run_simple
+method at the bottom of request_handler.py. The first argument is the location
+of the listener (set to ``127.0.0.1``, or ``localhost``), the second is the port
+(set to ``5000``). These two arguments can be changed to match your desired
+setup.
