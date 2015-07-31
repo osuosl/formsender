@@ -9,7 +9,8 @@ from datetime import datetime
 from conf import TOKN, EMAIL, CEILING
 from request_handler import (Forms, create_msg, validate_name, is_valid_email,
                              is_hidden_field_empty, is_valid_token, create_app,
-                             format_message, set_mail_subject, set_mail_from)
+                             format_message, set_mail_subject, set_mail_from,
+                             send_email)
 
 
 class TestFormsender(unittest.TestCase):
@@ -85,7 +86,7 @@ class TestFormsender(unittest.TestCase):
 
         # Call send_email and assert sendmail was called correctly
         real = create_app()
-        real.send_email(msg, msg_from, msg_subj)
+        send_email(msg, msg_from, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(msg_from,
                                                  EMAIL,
                                                  msg_send.as_string())

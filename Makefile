@@ -7,6 +7,7 @@ help:
 				@echo '   make run       run the application on http://localhost:5000'
 				@echo '   make clean     remove the generated files                  '
 				@echo '   make tests     run tests                                   '
+				@echo '   make lint      run pylint on application                   '
 				@echo '                                                              '
 
 run:
@@ -17,3 +18,6 @@ clean:
 
 tests:
 	      $(PY) tests.py
+
+lint:
+	      pylint request_handler.py
