@@ -18,6 +18,19 @@ In conf.py change the following variables to match your setup:
 * ``CEILING`` is the maximum number of submit requests formsender will accept
   per second.
 
+You can run flake8 on request_handler (the application):
+
+.. code-block:: none
+
+    make flake
+
+
+And tests can be run:
+
+.. code-block:: none
+
+    make tests
+
 To run the application locally for development purposes:
 
 .. code-block:: none
