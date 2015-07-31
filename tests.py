@@ -1,15 +1,12 @@
-from conf import TOKN, EMAIL, CEILING
 import smtplib
 import unittest
 import werkzeug
-from request_handler import (Forms, create_msg, validate_name, is_valid_email,
-                             is_hidden_field_empty, is_valid_token, create_app,
-                             format_message, set_mail_subject, set_mail_from)
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
 from email.mime.text import MIMEText
-from datetime import datetime
+from conf import TOKN, EMAIL, CEILING
+import request_handler as handler
 
 
 class TestFormsender(unittest.TestCase):
@@ -21,15 +18,15 @@ class TestFormsender(unittest.TestCase):
         Checks that each element in the request is returned create_msg
         """
         builder = EnvironBuilder(method='POST',
-                                 data={'foo' : 'this is some text',
-                                      'file': 'my file contents',
-                                      'test': 'test.txt',
-                                      'redirect': 'http://www.example.com' })
+                                 data={'foo': 'this is some text',
+                                       'file': 'my file contents',
+                                       'test': 'test.txt',
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertEqual(create_msg(req)['foo'], builder.form['foo'])
-        self.assertEqual(create_msg(req)['file'], builder.form['file'])
-        self.assertEqual(create_msg(req)['test'], builder.form['test'])
+        self.assertEqual(handler.create_msg(req)['foo'], builder.form['foo'])
+        self.assertEqual(handler.create_msg(req)['file'], builder.form['file'])
+        self.assertEqual(handler.create_msg(req)['test'], builder.form['test'])
 
     def test_create_msg_no_content(self):
         """
@@ -40,7 +37,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={})
         env = builder.get_environ()
         req = Request(env)
-        self.assertIsNone(create_msg(req))
+        self.assertIsNone(handler.create_msg(req))
 
     def test_create_msg_with_content_get_method(self):
         """
@@ -49,12 +46,12 @@ class TestFormsender(unittest.TestCase):
         Checks that create_msg returns None
         """
         builder = EnvironBuilder(method='GET',
-                                 data={'foo' : 'this is some text',
+                                 data={'foo': 'this is some text',
                                        'file': 'my file contents',
                                        'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertIsNone(create_msg(req))
+        self.assertIsNone(handler.create_msg(req))
 
     def test_send_email(self):
         """
@@ -69,23 +66,23 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'tokn': TOKN,
-                                       'redirect': 'http://www.example.com' })
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
 
         # Construct message for assertion
-        msg = create_msg(req)
+        msg = handler.create_msg(req)
         msg_send = MIMEText(str(msg))
-        msg_from = set_mail_from(msg)
-        msg_subj = set_mail_subject(msg)
+        msg_from = handler.set_mail_from(msg)
+        msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
 
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was called correctly
-        real = create_app()
-        real.send_email(msg, msg_from, msg_subj)
+        handler.create_app()
+        handler.send_email(msg, msg_from, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(msg_from,
                                                  EMAIL,
                                                  msg_send.as_string())
@@ -103,13 +100,13 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'tokn': TOKN,
-                                       'redirect': 'http://www.example.com' })
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
 
-        app = create_app()
+        app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
@@ -129,12 +126,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'tokn': TOKN,
-                                       'redirect': 'http://www.example.com' })
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
-        app = create_app()
+        app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
@@ -154,12 +151,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'invalid@example.com',
                                        'last_name': '',
                                        'tokn': TOKN,
-                                       'redirect': 'http://www.example.com' })
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns false in Travis
         mock_validate_email.return_value = False
-        app = create_app()
+        app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
@@ -180,12 +177,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '!',
                                        'tokn': TOKN,
-                                       'redirect': 'http://www.example.com' })
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
-        app = create_app()
+        app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
@@ -205,12 +202,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'tokn': 'evilrobot',
-                                       'redirect': 'http://www.example.com' })
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
-        app = create_app()
+        app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
@@ -231,7 +228,7 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
 
-        self.assertTrue(is_valid_email(req))
+        self.assertTrue(handler.is_valid_email(req))
 
     def test_is_valid_email_with_invalid(self):
         """
@@ -244,7 +241,7 @@ class TestFormsender(unittest.TestCase):
                                  data={'email': 'nope@example.com'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertFalse(is_valid_email(req))
+        self.assertFalse(handler.is_valid_email(req))
 
     def test_validate_name_with_valid(self):
         """
@@ -257,7 +254,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': 'Matthew'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertTrue(validate_name(req))
+        self.assertTrue(handler.validate_name(req))
 
     def test_validate_name_with_invalid(self):
         """
@@ -270,7 +267,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'name': '  '})
         env = builder.get_environ()
         req = Request(env)
-        self.assertFalse(validate_name(req))
+        self.assertFalse(handler.validate_name(req))
 
     def test_is_hidden_field_empty_empty(self):
         """
@@ -282,7 +279,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'last_name': ''})
         env = builder.get_environ()
         req = Request(env)
-        self.assertTrue(is_hidden_field_empty(req))
+        self.assertTrue(handler.is_hidden_field_empty(req))
 
     def test_is_hidden_field_empty_full(self):
         """
@@ -294,7 +291,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'last_name': 'nope'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertFalse(is_hidden_field_empty(req))
+        self.assertFalse(handler.is_hidden_field_empty(req))
 
     def test_is_valid_token_valid(self):
         """
@@ -307,7 +304,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
-        self.assertTrue(is_valid_token(req))
+        self.assertTrue(handler.is_valid_token(req))
 
     def test_is_valid_token_invalid(self):
         """
@@ -320,18 +317,19 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={'tokn': 'imarobot'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertFalse(is_valid_token(req))
+        self.assertFalse(handler.is_valid_token(req))
 
     @patch('request_handler.validate_email')
     def test_rate_limiter_valid_rate(self, mock_validate_email):
         """
         Tests rate limiter with a valid rate
         """
-        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
-                                        'email': 'example@osuosl.org',
-                                        'last_name': '',
-                                        'tokn': TOKN,
-                                        'redirect': 'http://www.example.com' })
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '',
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com'})
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         # Mock sendmail function so it doesn't send an actual email
@@ -339,7 +337,7 @@ class TestFormsender(unittest.TestCase):
         for i in range(CEILING - 1):
             env = builder.get_environ()
             req = Request(env)
-            app = create_app()
+            app = handler.create_app()
             resp = app.on_form_page(req)
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['name']
@@ -352,20 +350,21 @@ class TestFormsender(unittest.TestCase):
         """
         Tests rate limiter with an invalid rate
         """
-        builder = EnvironBuilder(method='POST', data={'name': 'Valid Guy',
-                                        'email': 'example@osuosl.org',
-                                        'last_name': '',
-                                        'tokn': TOKN,
-                                        'redirect': 'http://www.example.com' })
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '',
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com'})
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         env = builder.get_environ()
         req = Request(env)
-        app = create_app()
+        app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         for i in range(CEILING + 1):
-            resp = app.on_form_page(req)
+            app.on_form_page(req)
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['email']
 
@@ -383,7 +382,7 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
 
@@ -391,11 +390,11 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
 
         # Create app and mock redirect
-        app = create_app()
+        app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
-        resp = app.on_form_page(req)
+        app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with('http://www.example.com',
                                                    code=302)
@@ -412,7 +411,7 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'nope@example.com',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
 
@@ -423,15 +422,15 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = False
 
         # Create app and mock redirect
-        app = create_app()
+        app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-                'http://www.example.com?error=1&message=Invalid+Email',
-                code=302)
+            'http://www.example.com?error=1&message=Invalid+Email',
+            code=302)
 
     @patch('request_handler.validate_email')
     def test_redirect_url_error_2(self, mock_validate_email):
@@ -445,7 +444,7 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
 
@@ -453,15 +452,15 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
 
         # Create app and mock redirect
-        app = create_app()
+        app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-                'http://www.example.com?error=2&message=Invalid+Name',
-                code=302)
+            'http://www.example.com?error=2&message=Invalid+Name',
+            code=302)
 
     @patch('request_handler.validate_email')
     def test_redirect_url_error_3(self, mock_validate_email):
@@ -475,7 +474,7 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '!',
-                                       'tokn': 'wrong token' })
+                                       'tokn': 'wrong token'})
         env = builder.get_environ()
         req = Request(env)
 
@@ -483,15 +482,15 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
 
         # Create app and mock redirect
-        app = create_app()
+        app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-          'http://www.example.com?error=3&message=Improper+Form+Submission',
-          code=302)
+            'http://www.example.com?error=3&message=Improper+Form+Submission',
+            code=302)
 
     @patch('request_handler.validate_email')
     def test_redirect_url_error_4(self, mock_validate_email):
@@ -505,24 +504,24 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
 
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
-        app = create_app()
+        app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         for i in range(CEILING + 1):
-            resp = app.on_form_page(req)
+            app.on_form_page(req)
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['name']
 
         werkzeug.utils.redirect.assert_called_with(
-                'http://www.example.com?error=4&message=Too+Many+Requests',
-                code=302)
+            'http://www.example.com?error=4&message=Too+Many+Requests',
+            code=302)
 
     def test_strip_incoming_redirect_query(self):
         # Build test environment
@@ -531,10 +530,10 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'www.example.com?mal=param',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
-        message = create_msg(req)
+        message = handler.create_msg(req)
         self.assertEqual(message['redirect'], 'www.example.com')
 
     def test_strip_incoming_redirect_no_query(self):
@@ -544,10 +543,10 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
-        message = create_msg(req)
+        message = handler.create_msg(req)
         self.assertEqual(message['redirect'], builder.form['redirect'])
 
     def test_format_message(self):
@@ -560,7 +559,7 @@ class TestFormsender(unittest.TestCase):
                                                       "same line as the title"),
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         target_message = ("Contact:\n"
@@ -572,8 +571,8 @@ class TestFormsender(unittest.TestCase):
                           "Some Field:\n\n"
                           "This is multi line and should not be on the same "
                           "line as the title\n\n")
-        message = create_msg(req)
-        formatted_message = format_message(message)
+        message = handler.create_msg(req)
+        formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
 
     def test_set_mail_subject_with_subj(self):
@@ -589,12 +588,12 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
                                        'mail_subject': 'Test Form',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
-        message = create_msg(req)
-        subject = set_mail_subject(message)
+        message = handler.create_msg(req)
+        subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Test Form')
 
     def test_set_mail_subject_with_nothing(self):
@@ -609,12 +608,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
-        message = create_msg(req)
-        subject = set_mail_subject(message)
+        message = handler.create_msg(req)
+        subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
 
     def test_set_mail_subject_with_key_only(self):
@@ -630,12 +629,12 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
                                        'mail_subject': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
-        message = create_msg(req)
-        subject = set_mail_subject(message)
+        message = handler.create_msg(req)
+        subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
 
     def test_set_mail_from_with_from(self):
@@ -650,12 +649,12 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
                                        'mail_from': 'Test Form at example.com',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
-        message = create_msg(req)
-        mail_from = set_mail_from(message)
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'Test Form at example.com')
 
     def test_set_mail_from_with_nothing(self):
@@ -669,12 +668,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
-        message = create_msg(req)
-        mail_from = set_mail_from(message)
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'Form')
 
     def test_set_mail_from_with_key_only(self):
@@ -689,15 +688,13 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
                                        'mail_from': '',
-                                       'tokn': TOKN })
+                                       'tokn': TOKN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
-        message = create_msg(req)
-        mail_from = set_mail_from(message)
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'Form')
-
-
 
 
 if __name__ == '__main__':

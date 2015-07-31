@@ -18,6 +18,19 @@ In conf.py change the following variables to match your setup:
 * ``CEILING`` is the maximum number of submit requests formsender will accept
   per second.
 
+You can run flake8 on request_handler (the application):
+
+.. code-block:: none
+
+    make flake
+
+
+And tests can be run:
+
+.. code-block:: none
+
+    make tests
+
 To run the application locally for development purposes:
 
 .. code-block:: none
@@ -25,11 +38,10 @@ To run the application locally for development purposes:
     make run
 
 The app will now wait at ``localhost:5000`` for the form to be submitted, and
-will email the information submitted to the email specified. You can navigate to
-``localhost:5000`` to see a simple test form.
+will email the information submitted to the email specified.
 
-If you want to make changes to the local development setup, there is a command
-called run_simple at the bottom of request_handler.py. The first variable is the
-location of the listener (set to ``127.0.0.1``, or ``localhost``), the second is
-the port (set to ``5000``). These two variables can be changed to match your
-desired setup.
+You can change the host and port Formsender waits at by modifying the run_simple
+method at the bottom of request_handler.py. The first argument is the location
+of the listener (set to ``127.0.0.1``, or ``localhost``), the second is the port
+(set to ``5000``). These two arguments can be changed to match your desired
+setup.

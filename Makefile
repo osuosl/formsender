@@ -7,6 +7,7 @@ help:
 				@echo '   make run       run the application on http://localhost:5000'
 				@echo '   make clean     remove the generated files                  '
 				@echo '   make tests     run tests                                   '
+				@echo '   make flake     run flake8 on application                   '
 				@echo '                                                              '
 
 run:
@@ -17,3 +18,6 @@ clean:
 
 tests:
 	      $(PY) tests.py
+
+flake:
+	      flake8 request_handler.py
