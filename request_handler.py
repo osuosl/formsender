@@ -19,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
-from conf import EMAIL, TOKN, CEILING
+from conf import EMAIL, TOKN, CEILING, DUPL_CHECK_LIM
 
 
 class Forms(object):
@@ -178,17 +178,20 @@ class RateLimiter(object):
 
     def is_duplicate(self, submission):
         """Calculates a hash from a submission and adds it to the hash list"""
-        sub_hash = hashlib.sha512()
-        sub_hash.update(str(submission))
-        sub_hash = sub_hash.hexdigest()
+        init_hash = hashlib.sha512()
+        init_hash.update(str(submission))
+        sub_hash = init_hash.hexdigest()
         if not self.check_time_diff_hash():
             return self.check_for_duplicate_hash(sub_hash)
         return False
 
     def check_time_diff_hash(self):
-        """Checks time_diff_hash for a value greater than one hour"""
+        """
+        Checks time_diff_hash for a value greater than DUPL_CHECK_LIM from
+        conf.py
+        """
         self.set_time_diff_hash()
-        if self.time_diff_hash > (3600):  # 60 seconds * 60 minutes
+        if self.time_diff_hash > (DUPL_CHECK_LIM):  # from conf.py
             self.reset_hash()
             return True
         return False
@@ -209,9 +212,8 @@ class RateLimiter(object):
         Checks for a duplicate hash in hash_list
         Returns True if there is a duplicate and False otherwise
         """
-        for index, element in enumerate(self.hash_list):
-            if sub_hash == self.hash_list[index]:
-                return True
+        if sub_hash in self.hash_list:
+            return True
         self.hash_list.append(sub_hash)
         return False
 
