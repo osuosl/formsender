@@ -232,7 +232,6 @@ def is_hidden_field_empty(request):
         return True
     return False
 
-#
 def is_valid_token(request):
     """Make sure request's 'tokn' field matches TOKN in conf.py"""
     if request.form['tokn'] == TOKN:
