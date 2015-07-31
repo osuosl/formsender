@@ -320,10 +320,6 @@ def send_email(msg, email_from, subject):
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
     # Creates the app
-    SEND_APP = create_app()
+    app = create_app()
     # Starts the listener
-    run_simple('127.0.0.1',
-               5000,
-               SEND_APP,
-               use_debugger=True,
-               use_reloader=True)
+    run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
