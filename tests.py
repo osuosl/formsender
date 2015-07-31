@@ -713,31 +713,34 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Create apps
-        app1 = create_app()
-        app2 = create_app()
-        app3 = create_app()
-        app4 = create_app()
+        app1 = handler.create_app()
+        app2 = handler.create_app()
+        app3 = handler.create_app()
+        app4 = handler.create_app()
 
         # Will cause a duplicate with resp4 because
         # resp1.name = 'Valid Guy' = resp4.name
         req = Request(env)
-        resp1 = app1.on_form_page(req)
+        app1.on_form_page(req)
 
         # Update name so not a duplicate
         builder.form['name'] = 'Another Guy'
+        env = builder.get_environ()
         req = Request(env)
-        resp2 = app2.on_form_page(req)
+        app2.on_form_page(req)
 
         # Update name so not a duplicate
         builder.form['name'] = 'A Third Guy'
+        env = builder.get_environ()
         req = Request(env)
-        resp3 = app3.on_form_page(req)
+        app3.on_form_page(req)
 
         # Duplicate with resp1 because
         # resp1.name = 'Valid Guy' = resp4.name
         builder.form['name'] = 'Valid Guy'
+        env = builder.get_environ()
         req = Request(env)
-        resp4 = app4.on_form_page(req)
+        app4.on_form_page(req)
 
         self.assertIsNone(app1.error)
         self.assertIsNone(app2.error)
