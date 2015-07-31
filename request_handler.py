@@ -188,7 +188,7 @@ class RateLimiter(object):
     def check_time_diff_hash(self):
         """Checks time_diff_hash for a value greater than one hour"""
         self.set_time_diff_hash()
-        if self.time_diff_hash > (3600): # 60 seconds * 60 minutes
+        if self.time_diff_hash > (3600):  # 60 seconds * 60 minutes
             self.reset_hash()
             return True
         return False
