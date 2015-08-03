@@ -19,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
-from conf import EMAIL, TOKN, CEILING, DUPL_CHECK_LIM
+from conf import EMAIL, TOKN, CEILING, DUPLICATE_CHECK_TIME
 
 
 class Forms(object):
@@ -142,13 +142,16 @@ class RateLimiter(object):
     is_rate_violation
     """
     def __init__(self):
+        # Rate variables
         self.rate = 0
-        self.start_time = datetime.now()
         self.time_diff = 0
-        self.hash_list = []
-        self.start_time_hash = datetime.now()
+        self.start_time = datetime.now()
+        # Same-submission check variables
         self.time_diff_hash = 0
+        self.start_time_hash = datetime.now()
+        self.hash_list = []
 
+    # Rate methods
     def set_time_diff(self):
         """Sets time_diff in seconds"""
         time_d = datetime.now() - self.start_time
@@ -176,13 +179,19 @@ class RateLimiter(object):
             self.reset_rate()
         return False
 
+    # Same-submission check methods
     def is_duplicate(self, submission):
         """Calculates a hash from a submission and adds it to the hash list"""
+        # Create a hexidecmal hash of the submission using sha512
         init_hash = hashlib.sha512()
         init_hash.update(str(submission))
         sub_hash = init_hash.hexdigest()
-        if not self.check_time_diff_hash():
+        # If the time difference is under the limit in settings, check for a
+        # duplicate hash in hash_list
+        if self.check_time_diff_hash():
             return self.check_for_duplicate_hash(sub_hash)
+        # If the time difference is greater than the limit in settings, there is
+        # no duplicate since hash_list was reset in check_time_diff_hash
         return False
 
     def check_time_diff_hash(self):
@@ -191,13 +200,15 @@ class RateLimiter(object):
         conf.py
         """
         self.set_time_diff_hash()
-        if self.time_diff_hash > (DUPL_CHECK_LIM):  # from conf.py
+        # If time difference is greater than DUPLICATE_CHECK_TIME, reset the
+        # hash list and time variables
+        if self.time_diff_hash > (DUPLICATE_CHECK_TIME):  # from conf.py
             self.reset_hash()
-            return True
-        return False
+            return False
+        return True
 
     def set_time_diff_hash(self):
-        """Sets time_diff in seconds"""
+        """Sets time_diff_hash in seconds"""
         time_d = datetime.now() - self.start_time_hash
         self.time_diff_hash = time_d.seconds
 
@@ -214,6 +225,7 @@ class RateLimiter(object):
         """
         if sub_hash in self.hash_list:
             return True
+        # If there is no duplicate, add hash to the list and return False
         self.hash_list.append(sub_hash)
         return False
 
