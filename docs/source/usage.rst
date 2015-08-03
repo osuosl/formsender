@@ -11,12 +11,15 @@ In conf.py change the following variables to match your setup:
     EMAIL = u'email@example.com'
     TOKN = u'1234567890-='
     CEILING = 10
+    DUPLICATE_CHECK_TIME = 3600
 
 * ``EMAIL`` is where the form data will be sent.
 * ``TOKN`` is the validating token from the form. This must match a hidden field
   in your form called 'tokn'.
 * ``CEILING`` is the maximum number of submit requests formsender will accept
   per second.
+* ``DUPLICATE_CHECK_TIME`` is the time (in seconds) to check past form
+  submissions for duplicate submissions.
 
 You can run flake8 on request_handler (the application):
 

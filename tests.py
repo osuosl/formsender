@@ -334,10 +334,10 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        app = handler.create_app()
         for i in range(CEILING - 1):
             env = builder.get_environ()
             req = Request(env)
-            app = handler.create_app()
             resp = app.on_form_page(req)
             # Avoid duplicate form error
             builder.form['name'] = str(i) + builder.form['name']
@@ -695,6 +695,56 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'Form')
+
+    @patch('request_handler.validate_email')
+    def test_same_submission(self, mock_validate_email):
+        """
+        Tests that the same form is not sent twice.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '',
+                                       'tokn': TOKN,
+                                       'redirect': 'http://www.example.com'})
+
+        env = builder.get_environ()
+
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        mock_validate_email.return_value = True
+
+        # Create apps
+        app = handler.create_app()
+
+        # Will cause a duplicate with the last call because
+        # first app.name = 'Valid Guy' = last app.name
+        req = Request(env)
+        app.on_form_page(req)
+        self.assertIsNone(app.error)
+
+        # Update name so not a duplicate
+        builder.form['name'] = 'Another Guy'
+        env = builder.get_environ()
+        req = Request(env)
+        app.on_form_page(req)
+        self.assertIsNone(app.error)
+
+        # Update name so not a duplicate
+        builder.form['name'] = 'A Third Guy'
+        env = builder.get_environ()
+        req = Request(env)
+        app.on_form_page(req)
+        self.assertIsNone(app.error)
+
+        # Duplicate with first app because
+        # first app.name = 'Valid Guy' = this app.name
+        builder.form['name'] = 'Valid Guy'
+        env = builder.get_environ()
+        req = Request(env)
+        app.on_form_page(req)
+
+        self.assertEqual(app.error, 'Duplicate Request')
 
 
 if __name__ == '__main__':

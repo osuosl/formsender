@@ -10,6 +10,7 @@ import os
 import smtplib
 import werkzeug
 import urllib
+import hashlib
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -18,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
-from conf import EMAIL, TOKN, CEILING
+from conf import EMAIL, TOKN, CEILING, DUPLICATE_CHECK_TIME
 
 
 class Forms(object):
@@ -26,10 +27,10 @@ class Forms(object):
     This class listens for a form submission, checks that the data is valid, and
     sends the form data in a formatted message to the email specified in conf.py
     """
-    def __init__(self, rater):
+    def __init__(self, controller):
         # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
-        self.rater = rater
+        self.controller = controller
         self.error = None
         # Creates jinja template environment
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
@@ -63,7 +64,7 @@ class Forms(object):
         Checks for valid form data, calls send_email, returns a redirect
         """
         # Increment rate because we received a request
-        self.rater.increment_rate()
+        self.controller.increment_rate()
         self.error = None
         error_number = self.are_fields_invalid(request)
         if request.method == 'POST' and error_number:
@@ -92,9 +93,12 @@ class Forms(object):
               or not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
-        elif self.rater.is_rate_violation():
+        elif self.controller.is_rate_violation():
             self.error = 'Too Many Requests'
             error_number = 4
+        elif self.controller.is_duplicate(create_msg(request)):
+            self.error = 'Duplicate Request'
+            error_number = 5
         else:
             # If nothing above is true, there is no error
             return False
@@ -127,7 +131,7 @@ class Forms(object):
         return Response(template.render(), mimetype='text/html', status=400)
 
 
-class RateLimiter(object):
+class Controller(object):
     """
     Track number of form submissions per second
 
@@ -138,10 +142,16 @@ class RateLimiter(object):
     is_rate_violation
     """
     def __init__(self):
+        # Rate variables
         self.rate = 0
-        self.start_time = datetime.now()
         self.time_diff = 0
+        self.start_time = datetime.now()
+        # Same-submission check variables
+        self.time_diff_hash = 0
+        self.start_time_hash = datetime.now()
+        self.hash_list = []
 
+    # Rate methods
     def set_time_diff(self):
         """Sets time_diff in seconds"""
         time_d = datetime.now() - self.start_time
@@ -169,15 +179,65 @@ class RateLimiter(object):
             self.reset_rate()
         return False
 
+    # Same-submission check methods
+    def is_duplicate(self, submission):
+        """Calculates a hash from a submission and adds it to the hash list"""
+        # Create a hexidecmal hash of the submission using sha512
+        init_hash = hashlib.sha512()
+        init_hash.update(str(submission))
+        sub_hash = init_hash.hexdigest()
+        # If the time difference is under the limit in settings, check for a
+        # duplicate hash in hash_list
+        if self.check_time_diff_hash():
+            return self.check_for_duplicate_hash(sub_hash)
+        # If the time difference is greater than the limit in settings, there is
+        # no duplicate since hash_list was reset in check_time_diff_hash
+        return False
+
+    def check_time_diff_hash(self):
+        """
+        Checks time_diff_hash for a value greater than DUPL_CHECK_LIM from
+        conf.py
+        """
+        self.set_time_diff_hash()
+        # If time difference is greater than DUPLICATE_CHECK_TIME, reset the
+        # hash list and time variables
+        if self.time_diff_hash > (DUPLICATE_CHECK_TIME):  # from conf.py
+            self.reset_hash()
+            return False
+        return True
+
+    def set_time_diff_hash(self):
+        """Sets time_diff_hash in seconds"""
+        time_d = datetime.now() - self.start_time_hash
+        self.time_diff_hash = time_d.seconds
+
+    def reset_hash(self):
+        """Resets hash_list and hash_times"""
+        self.hash_list = []
+        self.time_diff_hash = 0
+        self.start_time_hash = datetime.now()
+
+    def check_for_duplicate_hash(self, sub_hash):
+        """
+        Checks for a duplicate hash in hash_list
+        Returns True if there is a duplicate and False otherwise
+        """
+        if sub_hash in self.hash_list:
+            return True
+        # If there is no duplicate, add hash to the list and return False
+        self.hash_list.append(sub_hash)
+        return False
+
 
 # Standalone/helper functions
 def create_app(with_static=True):
     """
-    Initializes RateLimiter (rater) and Forms (app) objects, pass rater to app
-    to keep track of number of submissions per minute
+    Initializes Controller (controller) and Forms (app) objects, pass
+    controller to app to keep track of number of submissions per minute
     """
-    rater = RateLimiter()
-    app = Forms(rater)
+    controller = Controller()
+    app = Forms(controller)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
