@@ -5,6 +5,22 @@ Formsender
 
 Sends emails containing the information in a form.
 
+Installation
+------------
+
+Start a virtual environment like so:
+
+```
+$ virtualenv venv
+$ source venv/bin/activate
+```
+
+Now install the requirements:
+
+```
+$ pip install -r requirements.txt
+```
+
 To start the application, run `python request_handler.py` or `make run`. This
 will start the application running locally `http://localhost:5000`.
 
