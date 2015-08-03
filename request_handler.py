@@ -27,10 +27,10 @@ class Forms(object):
     This class listens for a form submission, checks that the data is valid, and
     sends the form data in a formatted message to the email specified in conf.py
     """
-    def __init__(self, rater):
+    def __init__(self, controller):
         # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
-        self.rater = rater
+        self.controller = controller
         self.error = None
         # Creates jinja template environment
         self.jinja_env = Environment(loader=FileSystemLoader(template_path),
@@ -64,7 +64,7 @@ class Forms(object):
         Checks for valid form data, calls send_email, returns a redirect
         """
         # Increment rate because we received a request
-        self.rater.increment_rate()
+        self.controller.increment_rate()
         self.error = None
         error_number = self.are_fields_invalid(request)
         if request.method == 'POST' and error_number:
@@ -93,10 +93,10 @@ class Forms(object):
               or not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
-        elif self.rater.is_rate_violation():
+        elif self.controller.is_rate_violation():
             self.error = 'Too Many Requests'
             error_number = 4
-        elif self.rater.is_duplicate(create_msg(request)):
+        elif self.controller.is_duplicate(create_msg(request)):
             self.error = 'Duplicate Request'
             error_number = 5
         else:
@@ -131,7 +131,7 @@ class Forms(object):
         return Response(template.render(), mimetype='text/html', status=400)
 
 
-class RateLimiter(object):
+class Controller(object):
     """
     Track number of form submissions per second
 
@@ -233,11 +233,11 @@ class RateLimiter(object):
 # Standalone/helper functions
 def create_app(with_static=True):
     """
-    Initializes RateLimiter (rater) and Forms (app) objects, pass rater to app
-    to keep track of number of submissions per minute
+    Initializes Controller (controller) and Forms (app) objects, pass
+    controller to app to keep track of number of submissions per minute
     """
-    rater = RateLimiter()
-    app = Forms(rater)
+    controller = Controller()
+    app = Forms(controller)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
