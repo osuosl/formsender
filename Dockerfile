@@ -4,4 +4,5 @@ EXPOSE 5000
 COPY . /opt/formsender
 WORKDIR /opt/formsender
 RUN pip install -r requirements.txt
-CMD ["python",  "request_handler.py"]
+
+CMD make run

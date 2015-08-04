@@ -366,7 +366,7 @@ def send_email(msg, email_from, subject):
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
     # Sets up a temporary mail server to send from
-    smtp = smtplib.SMTP('0.0.0.0')
+    smtp = smtplib.SMTP('smtp.osuosl.org')
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
         smtp.sendmail(email_from, EMAIL, msg_send.as_string())
