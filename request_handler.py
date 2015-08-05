@@ -345,6 +345,7 @@ def set_mail_subject(message):
     # Otherwise return default
     return 'Form Submission'
 
+
 def send_email(msg, subject):
     """Sets up and sends the email"""
     # Format the message and set the subject
