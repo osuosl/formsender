@@ -48,9 +48,5 @@ To run the application locally for development purposes:
     $ make run
 
 The app will now wait at ``HOST:PORT`` for the form to be submitted, and
-will email the information submitted to the email specified.
-
-You can change the host and port Formsender waits at by modifying the run_simple
-method at the bottom of request_handler.py. The first argument is the location
-of the listener (set to ``HOST``), the second is the port (set to ``PORT``).
-These two arguments can be changed in conf.py to match your desired setup.
+will email the information submitted to the email specified. ``HOST`` and
+``PORT`` can be changed in conf.py to match your desired setup.
