@@ -150,10 +150,10 @@ class Controller(object):
         self.hash_list = []
 
     # Rate methods
-    def set_time_diff(self):
+    def set_time_diff(self, begin_time):
         """Sets time_diff in seconds"""
-        time_d = datetime.now() - self.start_time
-        self.time_diff = time_d.seconds
+        time_d = datetime.now() - begin_time
+        return time_d.seconds
 
     def increment_rate(self):
         """Increments self.rate by 1"""
@@ -170,7 +170,7 @@ class Controller(object):
         Returns False if rate doesn't violate CEILING in 1 second (no violation)
         and True otherwise (violation)
         """
-        self.set_time_diff()
+        self.time_diff = self.set_time_diff(self.start_time)
         if self.time_diff < 1 and self.rate > conf.CEILING:
             return True
         elif self.time_diff > 1:
@@ -197,18 +197,13 @@ class Controller(object):
         Checks time_diff_hash for a value greater than DUPL_CHECK_LIM from
         conf.py
         """
-        self.set_time_diff_hash()
+        self.time_diff_hash = self.set_time_diff(self.start_time_hash)
         # If time difference is greater than DUPLICATE_CHECK_TIME, reset the
         # hash list and time variables
         if self.time_diff_hash > (conf.DUPLICATE_CHECK_TIME):  # from conf.py
             self.reset_hash()
             return False
         return True
-
-    def set_time_diff_hash(self):
-        """Sets time_diff_hash in seconds"""
-        time_d = datetime.now() - self.start_time_hash
-        self.time_diff_hash = time_d.seconds
 
     def reset_hash(self):
         """Resets hash_list and hash_times"""
