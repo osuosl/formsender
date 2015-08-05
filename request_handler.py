@@ -19,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
-from conf import EMAIL, TOKN, CEILING, DUPLICATE_CHECK_TIME
+import conf
 
 
 class Forms(object):
@@ -173,7 +173,7 @@ class Controller(object):
         and True otherwise (violation)
         """
         self.set_time_diff()
-        if self.time_diff < 1 and self.rate > CEILING:
+        if self.time_diff < 1 and self.rate > conf.CEILING:
             return True
         elif self.time_diff > 1:
             self.reset_rate()
@@ -202,7 +202,7 @@ class Controller(object):
         self.set_time_diff_hash()
         # If time difference is greater than DUPLICATE_CHECK_TIME, reset the
         # hash list and time variables
-        if self.time_diff_hash > (DUPLICATE_CHECK_TIME):  # from conf.py
+        if self.time_diff_hash > (conf.DUPLICATE_CHECK_TIME):  # from conf.py
             self.reset_hash()
             return False
         return True
@@ -295,7 +295,7 @@ def is_hidden_field_empty(request):
 
 def is_valid_token(request):
     """Make sure request's 'tokn' field matches TOKN in conf.py"""
-    if request.form['tokn'] == TOKN:
+    if request.form['tokn'] == conf.TOKN:
         return True
     return False
 
@@ -366,11 +366,10 @@ def send_email(msg, email_from, subject):
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
     # Sets up a temporary mail server to send from
-    smtp = smtplib.SMTP('localhost')
-    # Attempts to send the mail to EMAIL, with the message formatted as a
-    # string
+    smtp = smtplib.SMTP(conf.SMTP_HOST)
+    # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
-        smtp.sendmail(email_from, EMAIL, msg_send.as_string())
+        smtp.sendmail(email_from, conf.EMAIL, msg_send.as_string())
         smtp.quit()
     except RuntimeError:
         smtp.quit()
@@ -382,4 +381,4 @@ if __name__ == '__main__':
     # Creates the app
     app = create_app()
     # Starts the listener
-    run_simple('127.0.0.1', 5000, app, use_debugger=True, use_reloader=True)
+    run_simple(conf.HOST, conf.PORT, app, use_debugger=True, use_reloader=True)

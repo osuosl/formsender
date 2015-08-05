@@ -37,7 +37,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={})
         env = builder.get_environ()
         req = Request(env)
-        self.assertIsNone(handler.create_msg(req))
+        self.assertEquals(handler.create_msg(req), None)
 
     def test_create_msg_with_content_get_method(self):
         """
@@ -51,7 +51,7 @@ class TestFormsender(unittest.TestCase):
                                        'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertIsNone(handler.create_msg(req))
+        self.assertEquals(handler.create_msg(req), None)
 
     def test_send_email(self):
         """
@@ -110,7 +110,7 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
-        self.assertIsNone(app.error)
+        self.assertEquals(app.error, None)
 
     @patch('request_handler.validate_email')
     def test_validations_invalid_name(self, mock_validate_email):
@@ -343,7 +343,7 @@ class TestFormsender(unittest.TestCase):
             builder.form['name'] = str(i) + builder.form['name']
 
         self.assertEqual(resp.status_code, 302)
-        self.assertIsNone(app.error)
+        self.assertEquals(app.error, None)
 
     @patch('request_handler.validate_email')
     def test_rate_limiter_invalid_rate(self, mock_validate_email):
@@ -721,21 +721,21 @@ class TestFormsender(unittest.TestCase):
         # first app.name = 'Valid Guy' = last app.name
         req = Request(env)
         app.on_form_page(req)
-        self.assertIsNone(app.error)
+        self.assertEquals(app.error, None)
 
         # Update name so not a duplicate
         builder.form['name'] = 'Another Guy'
         env = builder.get_environ()
         req = Request(env)
         app.on_form_page(req)
-        self.assertIsNone(app.error)
+        self.assertEquals(app.error, None)
 
         # Update name so not a duplicate
         builder.form['name'] = 'A Third Guy'
         env = builder.get_environ()
         req = Request(env)
         app.on_form_page(req)
-        self.assertIsNone(app.error)
+        self.assertEquals(app.error, None)
 
         # Duplicate with first app because
         # first app.name = 'Valid Guy' = this app.name
@@ -744,7 +744,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app.on_form_page(req)
 
-        self.assertEqual(app.error, 'Duplicate Request')
+        self.assertEquals(app.error, 'Duplicate Request')
 
 
 if __name__ == '__main__':

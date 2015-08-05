@@ -1,22 +1,16 @@
-{% block content %}
-<h2>Test Form</h2>
-<div>
-  <div>
-    <div>
-        <form enctype="multipart/form-data" action="" method="post" accept-charset="UTF-8">
-            <label for="edit-submitted-name">Name</label>
-            <input type="text" name="name" value="" size="60" maxlength="128" />
-            <label for="edit-submitted-email">Email</label>
-            <input type="text" name="email" value="" size="60" maxlength="128" />
-            <input type="hidden" name="hidden" value="" size="60" />
-            <input type="hidden" name="tokn" value="1234567890-=" />
-            <input type="hidden" name="redirect" value="http://www.osuosl.org" />
-            <input type="hidden" id="edit-submit-mail-sub" name="mail_subject" value="FORM: New Hosting Request" class="form-text" />
-            <input type="submit" name="op" value="Submit" />
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endblock %}
+<!DOCTYPE=html>
+<body>
+  <h2>Test Form</h2>
+  <form enctype="multipart/form-data" action="http://localhost:5000" method="post" accept-charset="UTF-8">
+    <label for="edit-submitted-name">Name</label>
+    <input type="text" name="name" value="" size="60" maxlength="128" />
+    <label for="edit-submitted-email">Email</label>
+    <input type="text" name="email" value="" size="60" maxlength="128" />
+    <input type="hidden" name="last_name" value="" size="60" />
+    <input type="hidden" name="tokn" value="1234567890-=" />
+    <input type="hidden" name="redirect" value="http://www.osuosl.org" />
+    <input type="hidden" id="edit-submit-mail-sub" name="mail_subject" value="FORM: New Hosting Request" class="form-text" />
+    <input type="hidden" id="edit-submit-mail-sub" name="mail_from" value="Req_Form@osuosl.org" class="form-text" />
+    <input type="submit" name="op" value="Submit" />
+  </form>
+</body>
