@@ -34,3 +34,13 @@ The application can be tested by running `make tests` and you can run flake8 on
 the source code by running `make flake`.
 
 To remove .pyc files run `make clean`
+
+Local Form Testing
+------------------
+
+An example of a simple form can be found in `templates/index.html`. If you open
+this in your browser, you can use that to POST a form to `PORT` defined in
+`conf.py`. The form currently redirects to http://www.osuosl.org but you can
+change the `redirect` field value to any site you wish. To see if your setup is
+actually sending an email, change the `EMAIL` setting in `conf.py` to your
+personal address.
