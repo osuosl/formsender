@@ -112,9 +112,7 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            send_email(format_message(message),
-                       set_mail_from(message),
-                       set_mail_subject(message))
+            send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -316,7 +314,7 @@ def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'tokn', 'op',
-                     'name', 'email', 'mail_subject', 'mail_from']
+                     'name', 'email', 'mail_subject']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
@@ -347,20 +345,7 @@ def set_mail_subject(message):
     # Otherwise return default
     return 'Form Submission'
 
-
-def set_mail_from(message):
-    """
-    Returns a string to be used in the 'from' field in an email
-    Default is 'Form'
-    """
-    # If key exists in the message dict and has content return the content
-    if 'mail_from' in message and message['mail_from']:
-        return message['mail_from']
-    # Otherwise return default
-    return 'Form'
-
-
-def send_email(msg, email_from, subject):
+def send_email(msg, subject):
     """Sets up and sends the email"""
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
@@ -369,7 +354,7 @@ def send_email(msg, email_from, subject):
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
-        smtp.sendmail(email_from, conf.EMAIL, msg_send.as_string())
+        smtp.sendmail(conf.FROM, conf.EMAIL, msg_send.as_string())
         smtp.quit()
     except RuntimeError:
         smtp.quit()
