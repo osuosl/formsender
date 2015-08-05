@@ -14,6 +14,7 @@ In conf.py change the following variables to match your setup:
     DUPLICATE_CHECK_TIME = 3600
     HOST = "0.0.0.0"
     PORT = 5000
+    SMTP_HOST = "smtp.osuosl.org"
 
 * ``EMAIL`` is where the form data will be sent.
 * ``TOKN`` is the validating token from the form. This must match a hidden field
@@ -24,6 +25,8 @@ In conf.py change the following variables to match your setup:
   submissions for duplicate submissions.
 * ``HOST`` and ``PORT`` is where the ``run_simple`` listener listens for POST
   requests
+* ``SMTP_HOST`` sets the host for the ``sendmail`` function. Must be a smtp
+  server
 
 You can run flake8 on request_handler (the application):
 

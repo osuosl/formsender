@@ -19,7 +19,8 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
-from conf import EMAIL, TOKN, CEILING, DUPLICATE_CHECK_TIME, HOST, PORT
+from conf import (EMAIL, TOKN, CEILING, DUPLICATE_CHECK_TIME, HOST, PORT,
+                  SMTP_HOST)
 
 
 class Forms(object):
@@ -366,7 +367,7 @@ def send_email(msg, email_from, subject):
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
     # Sets up a temporary mail server to send from
-    smtp = smtplib.SMTP('smtp.osuosl.org')
+    smtp = smtplib.SMTP(SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
         smtp.sendmail(email_from, EMAIL, msg_send.as_string())
