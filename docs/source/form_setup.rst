@@ -8,7 +8,7 @@ optional fields. Formsender uses these fields to authenticate the form and
 format the outgoing email message. To include these fields in your form just
 set the ``name``,  ``type``, and ``value`` properties like this:
 
-``<input type="hidden" name="hidden" value=""/>``
+``<input type="hidden" name="last_name" value=""/>``
 
 Required Fields
 ---------------
@@ -34,7 +34,7 @@ Include required fields by setting the ``name`` property to the following:
 
 * **tokn** - contents must match TOKN in conf.py, must be hidden
 
-    example: ``<input type="hidden" name="tokn" value="1234567890-=" />``
+    example: ``<input type="hidden" name="tokn" value="s0m3T0k3n$tr1ng" />``
 
 * **redirect** - url to redirect to on form submission, if an error occurs a
   query string will be added with an error message. Should be hidden.
@@ -44,8 +44,8 @@ Include required fields by setting the ``name`` property to the following:
 Optional Fields
 ---------------
 
-Formsender uses additional optional fields to help format your outgoing email.
-These optional fields are:
+Formsender uses an additional optional field to help format your outgoing
+email:
 
 * **mail_subject**
 
@@ -54,12 +54,3 @@ These optional fields are:
     be a hidden field.
 
     example: ``<input type="hidden" name="mail_subject" value="FORM: New Test Submission" />``
-
-* **mail_from**
-
-    sets outgoing email ``From`` field to mail_from's contents. If mail_from is
-    not included, the subject will default to ``Form``. This should be a hidden
-    field. This field **must not** contain spaces. Everything following a space
-    is ignored when sending the email.
-
-    example: ``<input type="hidden" name="mail_from" value="My_Test_Form" />``

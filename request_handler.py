@@ -112,9 +112,7 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            send_email(format_message(message),
-                       set_mail_from(message),
-                       set_mail_subject(message))
+            send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -151,12 +149,12 @@ class Controller(object):
         self.start_time_hash = datetime.now()
         self.hash_list = []
 
-    # Rate methods
-    def set_time_diff(self):
-        """Sets time_diff in seconds"""
-        time_d = datetime.now() - self.start_time
-        self.time_diff = time_d.seconds
+    def set_time_diff(self, begin_time):
+        """Returns time difference between begin_time and now in seconds"""
+        time_d = datetime.now() - begin_time
+        return time_d.seconds
 
+    # Rate methods
     def increment_rate(self):
         """Increments self.rate by 1"""
         self.rate += 1
@@ -172,7 +170,7 @@ class Controller(object):
         Returns False if rate doesn't violate CEILING in 1 second (no violation)
         and True otherwise (violation)
         """
-        self.set_time_diff()
+        self.time_diff = self.set_time_diff(self.start_time)
         if self.time_diff < 1 and self.rate > conf.CEILING:
             return True
         elif self.time_diff > 1:
@@ -199,18 +197,13 @@ class Controller(object):
         Checks time_diff_hash for a value greater than DUPL_CHECK_LIM from
         conf.py
         """
-        self.set_time_diff_hash()
+        self.time_diff_hash = self.set_time_diff(self.start_time_hash)
         # If time difference is greater than DUPLICATE_CHECK_TIME, reset the
         # hash list and time variables
         if self.time_diff_hash > (conf.DUPLICATE_CHECK_TIME):  # from conf.py
             self.reset_hash()
             return False
         return True
-
-    def set_time_diff_hash(self):
-        """Sets time_diff_hash in seconds"""
-        time_d = datetime.now() - self.start_time_hash
-        self.time_diff_hash = time_d.seconds
 
     def reset_hash(self):
         """Resets hash_list and hash_times"""
@@ -316,7 +309,7 @@ def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'tokn', 'op',
-                     'name', 'email', 'mail_subject', 'mail_from']
+                     'name', 'email', 'mail_subject']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
@@ -348,19 +341,7 @@ def set_mail_subject(message):
     return 'Form Submission'
 
 
-def set_mail_from(message):
-    """
-    Returns a string to be used in the 'from' field in an email
-    Default is 'Form'
-    """
-    # If key exists in the message dict and has content return the content
-    if 'mail_from' in message and message['mail_from']:
-        return message['mail_from']
-    # Otherwise return default
-    return 'Form'
-
-
-def send_email(msg, email_from, subject):
+def send_email(msg, subject):
     """Sets up and sends the email"""
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
@@ -369,7 +350,7 @@ def send_email(msg, email_from, subject):
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
-        smtp.sendmail(email_from, conf.EMAIL, msg_send.as_string())
+        smtp.sendmail(conf.FROM, conf.EMAIL, msg_send.as_string())
         smtp.quit()
     except RuntimeError:
         smtp.quit()

@@ -9,12 +9,13 @@ In conf.py change the following variables to match your setup:
 .. code-block:: python
 
     EMAIL = u'email@example.com'
-    TOKN = u'1234567890-='
+    TOKN = u's0m3T0k3n$tr1ng'
     CEILING = 10
     DUPLICATE_CHECK_TIME = 3600
     HOST = "0.0.0.0"
     PORT = 5000
     SMTP_HOST = "smtp.osuosl.org"
+    FROM = "formsender@osuosl.org"
 
 * ``EMAIL`` is where the form data will be sent.
 * ``TOKN`` is the validating token from the form. This must match a hidden field
@@ -27,6 +28,7 @@ In conf.py change the following variables to match your setup:
   requests
 * ``SMTP_HOST`` sets the host for the ``sendmail`` function. Must be a smtp
   server
+* ``FROM`` is the address the email will be sent from
 
 You can run flake8 on request_handler (the application):
 
