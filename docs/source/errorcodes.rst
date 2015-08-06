@@ -16,7 +16,20 @@ Error Number   Error Message               Cause
 5              Duplicate Request           This request is a duplicate of an earlier request
 ============   ========================    =============================================================
 
-These error codes can be handled with a little javascript in your redirect page:
+The error codes are returned in a query string appended to the redirect url with
+the following format
+
+.. code-block:: none
+
+    http://some.redirect.url?error=1&message=Invalid+Email
+
+When the form is successfully submitted, a success message is appended:
+
+.. code-block:: none
+
+    http://some.redirect.url?success
+
+These query strings can be handled with a little JavaScript in your redirect page:
 
 .. code-block:: JavaScript
 
@@ -33,18 +46,24 @@ These error codes can be handled with a little javascript in your redirect page:
       return (false);
     }
 
-    var errorNumber = getQueryVariable("error");
-    var errorMessage = getQueryVariable("message");
+    // If the only query string is 'success/' then the form was submitted successfully
+    if (window.location.search.substring(1) == "success/") {
+      document.write("<h3>Form successfully submitted</h3>")
+    } else {
 
-    // errorMessage will only be a string if a query string is present.
-    // If a query string is present, there was an error. Format the message.
-    if (typeof errorMessage == "string") {
-      errorMessage = errorMessage.replace("+", " ").replace("/", "");
-    }
+      var errorNumber = getQueryVariable("error");
+      var errorMessage = getQueryVariable("message");
 
-    // If both these exist, there was an error with the submission, write to page
-    if (errorNumber && errorMessage) {
-      document.write("<h3 style='color:red'>An error occurred with your form submission</h3>",
-                     "<p style='color:red'>Error number: ", errorNumber, "</p>",
-                     "<p style='color:red'>Error message: ", errorMessage, "</p>");
+      // errorMessage will only be a string if a query string is present.
+      // If a query string is present, there was an error. Format the message.
+      if (typeof errorMessage == "string") {
+        errorMessage = errorMessage.replace("+", " ").replace("/", "");
+      }
+
+      // If both these exist, there was an error with the submission, write to page
+      if (errorNumber && errorMessage) {
+        document.write("<h3 style='color:red'>An error occurred with your form submission</h3>",
+                       "<p style='color:red'>Error number: ", errorNumber, "</p>",
+                       "<p style='color:red'>Error message: ", errorMessage, "</p>");
+      }
     }
