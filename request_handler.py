@@ -72,7 +72,7 @@ class Forms(object):
             return self.handle_error(request, error_number)
         elif request.method == 'POST':
             # No errors
-            return self.handle_no_error(request)
+            return self.handle_no_error(request, error_number)
         else:
             # Renders error message locally if sent GET request
             return self.error_redirect()
@@ -105,7 +105,7 @@ class Forms(object):
         # There is an error if it got this far
         return error_number
 
-    def handle_no_error(self, request):
+    def handle_no_error(self, request, err_number):
         """
         Creates a message and sends an email with no error, then redirects to
         provided redirect url
@@ -113,14 +113,14 @@ class Forms(object):
         message = create_msg(request)
         if message:
             send_email(format_message(message), set_mail_subject(message))
-            redirect_url = message['redirect']
+            redirect_url = create_redirect_url(err_number, self.error, request)
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
             return self.error_redirect()
 
-    def handle_error(self, request, error_number):
+    def handle_error(self, request, err_number):
         """Creates error url and redirects with error query"""
-        error_url = create_error_url(error_number, self.error, request)
+        error_url = create_redirect_url(err_number, self.error, request)
         return werkzeug.utils.redirect(error_url, code=302)
 
     def error_redirect(self):
@@ -293,11 +293,14 @@ def is_valid_token(request):
     return False
 
 
-def create_error_url(error_number, message, request):
+def create_redirect_url(error_number, message, request):
     """Construct error message and append to redirect url"""
-    values = [('error', str(error_number)), ('message', message)]
-    query = urllib.urlencode(values)
-    return request.form['redirect'] + '?' + query
+    if not error_number:
+        return request.form['redirect'] + '?success'
+    else:
+        values = [('error', str(error_number)), ('message', message)]
+        query = urllib.urlencode(values)
+        return request.form['redirect'] + '?' + query
 
 
 def strip_query(url):
