@@ -149,12 +149,12 @@ class Controller(object):
         self.start_time_hash = datetime.now()
         self.hash_list = []
 
-    # Rate methods
     def set_time_diff(self, begin_time):
-        """Sets time_diff in seconds"""
+        """Returns time difference between begin_time and now in seconds"""
         time_d = datetime.now() - begin_time
         return time_d.seconds
 
+    # Rate methods
     def increment_rate(self):
         """Increments self.rate by 1"""
         self.rate += 1
