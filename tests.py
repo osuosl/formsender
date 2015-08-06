@@ -396,7 +396,7 @@ class TestFormsender(unittest.TestCase):
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
-            'http://www.example.com?form+submitted',
+            'http://www.example.com?success',
             code=302)
 
     @patch('request_handler.validate_email')

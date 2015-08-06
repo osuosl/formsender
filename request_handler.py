@@ -296,7 +296,7 @@ def is_valid_token(request):
 def create_redirect_url(error_number, message, request):
     """Construct error message and append to redirect url"""
     if not error_number:
-        return request.form['redirect'] + '?form+submitted'
+        return request.form['redirect'] + '?success'
     else:
         values = [('error', str(error_number)), ('message', message)]
         query = urllib.urlencode(values)
