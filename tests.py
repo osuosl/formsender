@@ -395,8 +395,9 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
         app.on_form_page(req)
 
-        werkzeug.utils.redirect.assert_called_with('http://www.example.com',
-                                                   code=302)
+        werkzeug.utils.redirect.assert_called_with(
+            'http://www.example.com?form+submitted',
+            code=302)
 
     @patch('request_handler.validate_email')
     def test_redirect_url_error_1(self, mock_validate_email):
