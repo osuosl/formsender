@@ -21,7 +21,7 @@ setup(
     author_email='support@osuosl.org',
     packages=find_packages(),
     url='https://github.com/osuosl/formsender',
-    license='',
+    license='Apache Version 2.0',
     zip_safe=False,
     description="Formsender application",
     long_description=open('README.rst').read()
