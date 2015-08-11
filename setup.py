@@ -24,5 +24,5 @@ setup(
     license='Apache Version 2.0',
     zip_safe=False,
     description="Formsender application",
-    long_description=open('README.rst').read()
+    long_description=open('README.md').read()
 )
