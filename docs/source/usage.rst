@@ -4,7 +4,9 @@ How To Use Formsender
 =====================
 
 
-In conf.py change the following variables to match your setup:
+In conf.py.dist there are several settings that Formsender relies on. To use
+these settings copy them to a new conf.py file in the root directory. You can
+change the following variables to match your setup:
 
 .. code-block:: python
 
@@ -37,7 +39,7 @@ You can run flake8 on request_handler (the application):
     $ make flake
 
 
-And tests can be run:
+Once a valid conf.py file exists, tests can be run:
 
 .. code-block:: none
 
