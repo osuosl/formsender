@@ -346,6 +346,7 @@ def send_email(msg, subject):
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
+    msg_send['To'] = conf.EMAIL
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
