@@ -21,7 +21,9 @@ change the following variables to match your setup:
 
 * ``EMAIL`` is where the form data will be sent.
 * ``TOKN`` is the validating token from the form. This must match a hidden field
-  in your form called 'tokn'.
+  in your form called 'tokn'. You can find and set the ``TOKN`` variable in your
+  conf.py file. Just make sure you also set the hidden ``tokn`` field value to
+  match.
 * ``CEILING`` is the maximum number of submit requests formsender will accept
   per second.
 * ``DUPLICATE_CHECK_TIME`` is the time (in seconds) to check past form
