@@ -54,3 +54,44 @@ email:
     be a hidden field.
 
     example: ``<input type="hidden" name="mail_subject" value="FORM: New Test Submission" />``
+
+All Other Fields
+================
+
+Formsender formats the email like so::
+
+    Contact:
+    --------
+    NAME:   Submitted Name
+    EMAIL:   email@example.com
+
+    Information:
+    ------------
+    Community Size:
+
+    About 15 developers
+
+    Deployment Timeframe:
+
+    Within 7 days
+
+    Distribution:
+
+    Fedora
+
+    Duration Of Need:
+
+    Six months
+
+The contact information, name and email, is placed at the beginning of the
+email. All following fields are placed in alphabetical order by the input
+``name``. Formsender formats each input ``name`` to title case and uses it as
+titles in the email. **Make sure these name fields are descriptive** and do not
+use strange formatting like the following:
+
+.. code-block:: html
+
+  <input type="text" name="submitted[distribution]" value="" />
+
+Formsender does not know how to interpret this name and will result in a
+``Bad Request`` error from the server.
