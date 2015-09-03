@@ -25,8 +25,9 @@ Before you run Formsender, you must copy the contents of `conf.py.dist` into a
 new file called `conf.py`. The settings in here can be changed depending on the
 configuration you want. More information can be found in the docs.
 
-To start the application, run `python request_handler.py` or `make run`. This
-will start the application running locally `http://localhost:5000`.
+To start the application, run `python request_handler.py` or `make run`. If you
+left the conf file unchanged, this will start the application running locally at
+`http://localhost:5000`.
 
 The application is now waiting at port 5000 and can be sent POST requests from
 forms. There are very specific requirements these forms must adhere to.
