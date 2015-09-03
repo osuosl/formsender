@@ -4,8 +4,8 @@ How To Use Formsender
 =====================
 
 In ``conf.py.dist`` there are several settings that Formsender relies on. To use
-these settings copy them to a new ``conf.py file`` in the root directory. You
-can change the following variables to match your setup:
+these settings copy them to a new ``conf.py file`` in the application's root
+directory. You can change the following variables to match your setup:
 
 .. code-block:: python
 
@@ -36,31 +36,23 @@ can change the following variables to match your setup:
 Set Up A Development Instance
 -----------------------------
 
-Start a virtual environment like so:
+To set up a development instance, first start a virtual environment like so:
 
-```
-$ virtualenv venv
-$ source venv/bin/activate
-```
+.. code-block:: none
+
+    $ virtualenv venv
+    $ source venv/bin/activate
+
 
 Now install the requirements:
 
-```
-$ pip install -r requirements.txt
-```
+.. code-block:: none
 
-Before you run Formsender, you must copy the contents of `conf.py.dist` into a
-new file called `conf.py`. The settings in here can be changed depending on the
-configuration you want. More information can be found in the docs.
+    $ pip install -r requirements.txt
 
-To start the application, run `python request_handler.py` or `make run`. If you
-left the conf file unchanged, this will start the application running locally at
-`http://localhost:5000`.
 
-The application is now waiting at port 5000 and can be sent POST requests from
-forms. There are very specific requirements these forms must adhere to.
-Instructions on how to set up a form that speaks to Formsender can be found in
-the `form setup documentation`_(http://formsender.readthedocs.org/en/latest/).
+Before you run Formsender, you must copy the contents of ``conf.py.dist`` into a
+new file called ``conf.py`` as described above.
 
 You can run flake8 on request_handler (the application):
 
@@ -84,16 +76,19 @@ The app will now wait at ``HOST:PORT`` for the form to be submitted, and will
 email the information submitted to the email specified. ``HOST`` and ``PORT``
 can be changed in ``conf.py`` to match your desired setup. If you left the conf
 file unchanged, this will start the application running locally at
-`http://localhost:5000`.
+``http://localhost:5000`` and can be sent POST requests from
+forms. There are very specific requirements these forms must adhere to.
+Instructions on how to set up a form that speaks to Formsender can be found in
+the `form setup documentation`_.
 
 Local Form Testing
 ------------------
 
-An example of a simple form can be found in `templates/index.html`. If you open
-this in your browser, you can use that to POST a form to `PORT` defined in
-`conf.py`. The form currently redirects to http://www.osuosl.org but you can
-change the `redirect` field value to any site you wish. To see if your setup is
-actually sending an email, change the `EMAIL` setting in `conf.py` to your
-personal address.
+An example of a simple form can be found in ``templates/index.html``. If you
+open this in your browser, you can use that to POST a form to ``PORT`` defined
+in ``conf.py``. The form currently redirects to http://www.osuosl.org but you
+can change the ``redirect`` field value to any site you wish. To see if your
+setup is actually sending an email, change the ``EMAIL`` setting in ``conf.py``
+to your personal address.
 
 .. _form setup documentation: http://formsender.readthedocs.org/en/latest/form_setup.html
