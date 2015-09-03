@@ -21,6 +21,10 @@ Now install the requirements:
 $ pip install -r requirements.txt
 ```
 
+Before you run Formsender, you must copy the contents of `conf.py.dist` into a
+new file called `conf.py`. The settings in here can be changed depending on the
+configuration you want. More information can be found in the docs.
+
 To start the application, run `python request_handler.py` or `make run`. This
 will start the application running locally `http://localhost:5000`.
 
