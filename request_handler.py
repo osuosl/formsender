@@ -19,6 +19,8 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
+import logging
+import logging.handlers
 import conf
 
 
@@ -229,6 +231,15 @@ def create_app(with_static=True):
     Initializes Controller (controller) and Forms (app) objects, pass
     controller to app to keep track of number of submissions per minute
     """
+    # Initiate a logger
+    logger = logging.getLogger('formsender')
+    handler = logging.handlers.SysLogHandler()
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+    # Initiate rate/duplicate controller and application
     controller = Controller()
     app = Forms(controller)
     if with_static:
