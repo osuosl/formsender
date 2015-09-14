@@ -9,6 +9,7 @@ install:
 
 before_script:
   - mv conf.py.dist conf.py
+  - echo LOG_ADDR = ('localhost', 514) >> conf.py
 
 # command to run tests
 script:
