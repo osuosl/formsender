@@ -91,24 +91,30 @@ class Forms(object):
         if not is_valid_email(request):
             self.error = 'Invalid Email'
             error_number = 1
+            invalid_option = 'email'
         elif not validate_name(request):
             self.error = 'Invalid Name'
             error_number = 2
+            invalid_option = 'name'
         elif (not is_hidden_field_empty(request)
               or not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
+            invalid_option = 'tokn'
         elif self.controller.is_rate_violation():
             self.error = 'Too Many Requests'
             error_number = 4
+            invalid_option = 'name'
         elif self.controller.is_duplicate(create_msg(request)):
             self.error = 'Duplicate Request'
             error_number = 5
+            invalid_option = 'name'
         else:
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
-        self.logger.warn('formsender received {0}'.format(self.error))
+        self.logger.warn('formsender received %s: %s', self.error,
+                          request.form[invalid_option])
         return error_number
 
     def handle_no_error(self, request):
@@ -118,7 +124,7 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            self.logger.info('sending email')
+            self.logger.info('sending email to: %s', message['email'])
             send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
