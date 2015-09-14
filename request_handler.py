@@ -100,7 +100,7 @@ class Forms(object):
               or not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
-            invalid_option = 'tokn'
+            invalid_option = 'name'
         elif self.controller.is_rate_violation():
             self.error = 'Too Many Requests'
             error_number = 4
@@ -113,8 +113,10 @@ class Forms(object):
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
-        self.logger.warn('formsender received %s: %s', self.error,
-                          request.form[invalid_option])
+        self.logger.warn('formsender received %s: %s from %s',
+                         self.error,
+                         request.form[invalid_option],
+                         request.form['email'])
         return error_number
 
     def handle_no_error(self, request):
