@@ -249,7 +249,7 @@ def create_app(with_static=True):
     """
     # Initiate a logger
     logger = logging.getLogger('formsender')
-    handler = logging.handlers.SysLogHandler(address='/dev/log')
+    handler = logging.handlers.SysLogHandler()
     formatter = logging.Formatter('%(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
