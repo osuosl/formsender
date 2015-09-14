@@ -49,7 +49,7 @@ class Forms(object):
             endpoint, values = adapter.match()
             return getattr(self, 'on_' + endpoint)(request, **values)
         except HTTPException, error:
-            self.logger.error(error)
+            self.logger.error('formsender: %s', error)
             return error
 
     def wsgi_app(self, environ, start_response):
@@ -79,7 +79,8 @@ class Forms(object):
             return self.handle_no_error(request)
         else:
             # Renders error message locally if sent GET request
-            self.logger.error('server received unhandled GET request')
+            self.logger.error('formsender: server received unhandled GET '
+                              'request, expected POST request')
             return self.error_redirect()
 
     def are_fields_invalid(self, request):
@@ -113,7 +114,7 @@ class Forms(object):
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
-        self.logger.warn('formsender received %s: %s from %s',
+        self.logger.warn('formsender: received %s: %s from %s',
                          self.error,
                          request.form[invalid_option],
                          request.form['email'])
@@ -126,7 +127,8 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            self.logger.info('sending email to: %s', message['email'])
+            self.logger.info('formsender: sending email to: %s',
+                             message['email'])
             send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
@@ -140,7 +142,7 @@ class Forms(object):
 
     def error_redirect(self):
         """Renders local error html file"""
-        self.logger.error('POST request was empty')
+        self.logger.error('formsender: POST request was empty')
         template = self.jinja_env.get_template('error.html')
         return Response(template.render(), mimetype='text/html', status=400)
 
@@ -247,8 +249,8 @@ def create_app(with_static=True):
     """
     # Initiate a logger
     logger = logging.getLogger('formsender')
-    handler = logging.FileHandler('./test.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    handler = logging.handlers.SysLogHandler(address='/dev/log')
+    formatter = logging.Formatter('%(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
