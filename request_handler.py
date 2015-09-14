@@ -132,7 +132,7 @@ class Forms(object):
 
     def error_redirect(self):
         """Renders local error html file"""
-        logger.error('POST request was empty')
+        self.logger.error('POST request was empty')
         template = self.jinja_env.get_template('error.html')
         return Response(template.render(), mimetype='text/html', status=400)
 
