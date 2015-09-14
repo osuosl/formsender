@@ -29,7 +29,7 @@ class Forms(object):
     This class listens for a form submission, checks that the data is valid, and
     sends the form data in a formatted message to the email specified in conf.py
     """
-    def __init__(self, controller):
+    def __init__(self, controller, logger):
         # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.controller = controller
@@ -40,6 +40,7 @@ class Forms(object):
         # When the browser is pointed at the root of the website, call
         # on_form_page
         self.url_map = Map([Rule('/', endpoint='form_page')])
+        self.logger = logger
 
     def dispatch_request(self, request):
         """Evaluates request to decide what happens"""
@@ -48,6 +49,7 @@ class Forms(object):
             endpoint, values = adapter.match()
             return getattr(self, 'on_' + endpoint)(request, **values)
         except HTTPException, error:
+            self.logger.error(error)
             return error
 
     def wsgi_app(self, environ, start_response):
@@ -77,6 +79,7 @@ class Forms(object):
             return self.handle_no_error(request)
         else:
             # Renders error message locally if sent GET request
+            self.logger.error('server received unhandled GET request')
             return self.error_redirect()
 
     def are_fields_invalid(self, request):
@@ -105,6 +108,7 @@ class Forms(object):
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
+        self.logger.warn('formsender received {0}'.format(self.error))
         return error_number
 
     def handle_no_error(self, request):
@@ -114,6 +118,7 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
+            self.logger.info('sending email')
             send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
@@ -127,6 +132,7 @@ class Forms(object):
 
     def error_redirect(self):
         """Renders local error html file"""
+        logger.error('POST request was empty')
         template = self.jinja_env.get_template('error.html')
         return Response(template.render(), mimetype='text/html', status=400)
 
@@ -146,7 +152,7 @@ class Controller(object):
         self.rate = 0
         self.time_diff = 0
         self.start_time = datetime.now()
-        # Same-submission check variables
+        # Duplicate-submission check variables
         self.time_diff_hash = 0
         self.start_time_hash = datetime.now()
         self.hash_list = []
@@ -179,7 +185,7 @@ class Controller(object):
             self.reset_rate()
         return False
 
-    # Same-submission check methods
+    # Duplicate-submission check methods
     def is_duplicate(self, submission):
         """Calculates a hash from a submission and adds it to the hash list"""
         # Create a hexidecmal hash of the submission using sha512
@@ -233,7 +239,7 @@ def create_app(with_static=True):
     """
     # Initiate a logger
     logger = logging.getLogger('formsender')
-    handler = logging.handlers.SysLogHandler()
+    handler = logging.FileHandler('./test.log')
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -241,7 +247,7 @@ def create_app(with_static=True):
 
     # Initiate rate/duplicate controller and application
     controller = Controller()
-    app = Forms(controller)
+    app = Forms(controller, logger)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
