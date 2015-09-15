@@ -56,7 +56,7 @@ email:
     example: ``<input type="hidden" name="mail_subject" value="FORM: New Test Submission" />``
 
 All Other Fields
-================
+----------------
 
 Formsender formats the email like so::
 

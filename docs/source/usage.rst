@@ -17,6 +17,7 @@ directory. You can change the following variables to match your setup:
     PORT = 5000
     SMTP_HOST = "smtp.osuosl.org"
     FROM = "formsender@osuosl.org"
+    LOG_ADDR = '/dev/log'
 
 * ``EMAIL`` is where the form data will be sent.
 * ``TOKN`` is the validating token from the form. This must match a hidden field
@@ -32,6 +33,8 @@ directory. You can change the following variables to match your setup:
 * ``SMTP_HOST`` sets the host for the ``sendmail`` function. Must be a smtp
   server
 * ``FROM`` is the address the email will be sent from
+* ``LOG_ADDR`` specifies where the formsender logs will be sent. This must point
+  to where syslog is listening on your server/workstation.
 
 Set Up A Development Instance
 -----------------------------
