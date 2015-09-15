@@ -19,6 +19,8 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
+import logging
+import logging.handlers
 import conf
 
 
@@ -27,7 +29,7 @@ class Forms(object):
     This class listens for a form submission, checks that the data is valid, and
     sends the form data in a formatted message to the email specified in conf.py
     """
-    def __init__(self, controller):
+    def __init__(self, controller, logger):
         # Sets up the path to the template files
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         self.controller = controller
@@ -38,6 +40,7 @@ class Forms(object):
         # When the browser is pointed at the root of the website, call
         # on_form_page
         self.url_map = Map([Rule('/', endpoint='form_page')])
+        self.logger = logger
 
     def dispatch_request(self, request):
         """Evaluates request to decide what happens"""
@@ -46,6 +49,7 @@ class Forms(object):
             endpoint, values = adapter.match()
             return getattr(self, 'on_' + endpoint)(request, **values)
         except HTTPException, error:
+            self.logger.error('formsender: %s', error)
             return error
 
     def wsgi_app(self, environ, start_response):
@@ -75,6 +79,8 @@ class Forms(object):
             return self.handle_no_error(request)
         else:
             # Renders error message locally if sent GET request
+            self.logger.error('formsender: server received unhandled GET '
+                              'request, expected POST request')
             return self.error_redirect()
 
     def are_fields_invalid(self, request):
@@ -86,23 +92,32 @@ class Forms(object):
         if not is_valid_email(request):
             self.error = 'Invalid Email'
             error_number = 1
+            invalid_option = 'email'
         elif not validate_name(request):
             self.error = 'Invalid Name'
             error_number = 2
+            invalid_option = 'name'
         elif (not is_hidden_field_empty(request)
               or not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
+            invalid_option = 'name'
         elif self.controller.is_rate_violation():
             self.error = 'Too Many Requests'
             error_number = 4
+            invalid_option = 'name'
         elif self.controller.is_duplicate(create_msg(request)):
             self.error = 'Duplicate Request'
             error_number = 5
+            invalid_option = 'name'
         else:
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
+        self.logger.warn('formsender: received %s: %s from %s',
+                         self.error,
+                         request.form[invalid_option],
+                         request.form['email'])
         return error_number
 
     def handle_no_error(self, request):
@@ -112,6 +127,8 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
+            self.logger.info('formsender: sending email to: %s',
+                             message['email'])
             send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
@@ -125,6 +142,7 @@ class Forms(object):
 
     def error_redirect(self):
         """Renders local error html file"""
+        self.logger.error('formsender: POST request was empty')
         template = self.jinja_env.get_template('error.html')
         return Response(template.render(), mimetype='text/html', status=400)
 
@@ -144,7 +162,7 @@ class Controller(object):
         self.rate = 0
         self.time_diff = 0
         self.start_time = datetime.now()
-        # Same-submission check variables
+        # Duplicate-submission check variables
         self.time_diff_hash = 0
         self.start_time_hash = datetime.now()
         self.hash_list = []
@@ -177,7 +195,7 @@ class Controller(object):
             self.reset_rate()
         return False
 
-    # Same-submission check methods
+    # Duplicate-submission check methods
     def is_duplicate(self, submission):
         """Calculates a hash from a submission and adds it to the hash list"""
         # Create a hexidecmal hash of the submission using sha512
@@ -229,8 +247,17 @@ def create_app(with_static=True):
     Initializes Controller (controller) and Forms (app) objects, pass
     controller to app to keep track of number of submissions per minute
     """
+    # Initiate a logger
+    logger = logging.getLogger('formsender')
+    handler = logging.handlers.SysLogHandler(address=conf.LOG_ADDR)
+    formatter = logging.Formatter('%(levelname)s %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+    # Initiate rate/duplicate controller and application
     controller = Controller()
-    app = Forms(controller)
+    app = Forms(controller, logger)
     if with_static:
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')

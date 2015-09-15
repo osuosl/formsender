@@ -10,3 +10,4 @@ HOST = "0.0.0.0"
 PORT = 5000
 SMTP_HOST = "smtp.osuosl.org"
 FROM = "formsender@osuosl.org"
+LOG_ADDR = '/dev/log'
