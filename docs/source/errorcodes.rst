@@ -69,18 +69,18 @@ following format in your syslog:
 
 .. code-block:: none
 
-  Sep 14 16:34:04 <hostname> INFO formsender: sending email to: <submission-email>
+  Sep 14 16:34:04 <hostname> INFO formsender: sending email from: <submission-email>
   Sep 14 16:34:04 <hostname> WARNING formsender: received Duplicate Request: <submission-name> from <submission-email>
   Sep 14 16:34:04 <hostname> WARNING formsender: received Too Many Requests: <submission-name> from <submission-email>
-  Sep 14 16:34:04 <hostname> INFO formsender: sending email to: <submission-email>
-  Sep 14 16:34:04 <hostname> INFO formsender: sending email to: <submission-email>
+  Sep 14 16:34:04 <hostname> INFO formsender: sending email from: <submission-email>
+  Sep 14 16:34:04 <hostname> INFO formsender: sending email from: <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Invalid Email: <submission-email> from <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Invalid Name:  from <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Improper Form Submission: <submission-name> from <submission-email>
-  Sep 14 16:34:05 <hostname> INFO formsender: sending email to: <submission-email>
+  Sep 14 16:34:05 <hostname> INFO formsender: sending email from: <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Duplicate Request: <submission-name> from <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Duplicate Request: <submission-name> from <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Duplicate Request: <submission-name> from <submission-email>
   Sep 14 16:34:05 <hostname> WARNING formsender: received Duplicate Request: <submission-name> from <submission-email>
-  Sep 14 16:34:05 <hostname> INFO formsender: sending email to: <submission-email>
-  Sep 14 16:34:05 <hostname> INFO formsender: sending email to: <submission-email>
+  Sep 14 16:34:05 <hostname> INFO formsender: sending email from: <submission-email>
+  Sep 14 16:34:05 <hostname> INFO formsender: sending email from: <submission-email>
