@@ -3,13 +3,16 @@
 Error Codes and Logs
 ====================
 
-Formsender logs its activity to syslog and tracks errors to send information to
-the form submitter.
+Formsender tracks its errors using error codes. These error codes are sent to
+the redirect url as explained `below`_. Additionally, Formsender `logs`_ its
+errors and activities to syslog.
+
+.. _below:
 
 Error Codes
 -----------
 
-Formsender returns different error codes in a query string to the redirct url
+Formsender returns different error codes in a query string to the redirect url
 when invalid data is sent from the form.
 
 ============   ========================    =============================================================
@@ -55,12 +58,14 @@ These error codes can be handled with a little javascript in your redirect page:
                      "<p style='color:red'>Error message: ", errorMessage, "</p>");
     }
 
+.. _logs:
+
 Logs
 ----
 
 In addition to the error codes sent to the redirect url, logs are sent to syslog
-on the server or workstation where formsender is running. Information will be
-logged in the following format in your syslog:
+on the system where formsender is running. Information will be logged in the
+following format in your syslog:
 
 .. code-block:: none
 
