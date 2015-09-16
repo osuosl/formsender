@@ -127,7 +127,7 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            self.logger.info('formsender: sending email to: %s',
+            self.logger.info('formsender: sending email from: %s',
                              message['email'])
             send_email(format_message(message), set_mail_subject(message))
             redirect_url = message['redirect']
