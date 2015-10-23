@@ -687,6 +687,74 @@ class TestFormsender(unittest.TestCase):
 
         self.assertEquals(app.error, 'Duplicate Request')
 
+    @patch('request_handler.validate_email')
+    def test_send_email_root(self):
+      """
+      Tests that the form is sent to the correct address.
+
+      Returns true if form is sent to root
+      False otherwise
+      """
+      builder = EnvironBuilder(method='POST'
+                               data={'name': 'Valid Guy',
+                                     'email': conf.EMAIL['root'],
+                                     'last_name': '',
+                                     'tokn': conf.TOKN})
+
+      env = builder.get_environ()
+      req = Request(env)
+
+      # Construct message for assertion
+      msg = handler.create_msg(req)
+      msg_send = MIMEText(str(msg))
+      msg_subj = handler.set_mail_subject(msg)
+      msg_send['Subject'] = msg_subj
+      msg_send['To'] = conf.EMAIL['root']
+
+      # Mock sendmail function
+      smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+
+      # Call send_email_root and assert sendmail was correctly called
+      # ???
+      handler.create_app()
+      handler.send_email_root(msg, msg_sub)
+      smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
+                                               conf.EMAIL['root'],
+                                               msg_send.as_string())
+
+    @patch('request_handler.validate_email')
+    def test_send_email_support(self):
+      """
+      Tests that the form is sent to the correct address.
+
+      Returns true if the form has been sent to support@osuosl.org
+      False otherwise
+      """
+      builder = EnvironBuilder(method='POST'
+                               data={'name': 'Valid Guy',
+                                     'email': conf.EMAIL['root'],
+                                     'last_name': '',
+                                     'tokn': conf.TOKN})
+
+      env = builder.get_environ()
+      req = Request(env)
+
+      msg = handler.create_msg(req)
+      msg_send = MIMEText(str(msg))
+      msg_subj = handler.set_mail_subject(msg)
+      msg_send['Subject'] = msg_subj
+      msg_send['To'] = conf.EMAIL['support']
+
+      # Mock sendmail function
+      smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+
+      # Call send_email_root and assert sendmail was correctly called
+      handler.create_app()
+      handler.send_email_support(msg, msg_sub)
+      smtplib.SMTP.sendmail.assert_called_with(conf.FROM.
+                                               conf.EMAIL['support']
+                                               msg_send.as_string());
+
 
 if __name__ == '__main__':
     unittest.main()
