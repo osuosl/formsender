@@ -717,7 +717,7 @@ class TestFormsender(unittest.TestCase):
         # Call send_email_root and assert sendmail was correctly called
         # ???
         handler.create_app()
-        handler.send_email_root(msg, msg_sub)
+        handler.send_email_root(msg, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
@@ -750,7 +750,7 @@ class TestFormsender(unittest.TestCase):
 
         # Call send_email_root and assert sendmail was correctly called
         handler.create_app()
-        handler.send_email_support(msg, msg_sub)
+        handler.send_email_support(msg, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
