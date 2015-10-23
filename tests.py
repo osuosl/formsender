@@ -695,7 +695,7 @@ class TestFormsender(unittest.TestCase):
         Returns true if form is sent to root
         False otherwise
         """
-        builder = EnvironBuilder(method='POST'
+        builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': conf.EMAIL['root'],
                                        'last_name': '',
@@ -730,7 +730,7 @@ class TestFormsender(unittest.TestCase):
         Returns true if the form has been sent to support@osuosl.org
         False otherwise
         """
-        builder = EnvironBuilder(method='POST'
+        builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
                                        'email': conf.EMAIL['root'],
                                        'last_name': '',
@@ -753,7 +753,7 @@ class TestFormsender(unittest.TestCase):
         handler.send_email_support(msg, msg_sub)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM.
                                                  conf.EMAIL['support']
-                                                 msg_send.as_string());
+                                                 msg_send.as_string())
 
 
 if __name__ == '__main__':
