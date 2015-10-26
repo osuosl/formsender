@@ -697,7 +697,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': conf.EMAIL['root'],
+                                       'email': 'root',
                                        'last_name': '',
                                        'tokn': conf.TOKN})
 
@@ -709,7 +709,7 @@ class TestFormsender(unittest.TestCase):
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['root']
+        msg_send['To'] = 'root'
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -730,7 +730,7 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': conf.EMAIL['root'],
+                                       'email': 'support',
                                        'last_name': '',
                                        'tokn': conf.TOKN})
 
@@ -742,7 +742,7 @@ class TestFormsender(unittest.TestCase):
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['support']
+        msg_send['To'] = 'support'
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
