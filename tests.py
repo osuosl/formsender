@@ -709,7 +709,7 @@ class TestFormsender(unittest.TestCase):
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
-        msg_send['To'] = 'root'
+        msg_send['To'] = conf.EMAIL['root']
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -742,7 +742,7 @@ class TestFormsender(unittest.TestCase):
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
-        msg_send['To'] = 'support'
+        msg_send['To'] = conf.EMAIL['support']
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
