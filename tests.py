@@ -697,7 +697,8 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': 'root',
+                                       'email': 'example@osuosl.com',
+                                       'send_to': 'root',
                                        'last_name': '',
                                        'tokn': conf.TOKN,
                                        'redirect': 'http://www.example.com'})
@@ -721,8 +722,8 @@ class TestFormsender(unittest.TestCase):
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
 
-    #@patch('request_handler.validate_email')
-    #def test_send_email_support(self):
+    # @patch('request_handler.validate_email')
+    # def test_send_email_support(self):
         """
         Tests that the form is sent to the correct address.
 
@@ -732,7 +733,8 @@ class TestFormsender(unittest.TestCase):
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
-                                       'email': 'support',
+                                       'email': 'example@osuosl.org',
+                                       'send_to': 'support',
                                        'last_name': '',
                                        'tokn': conf.TOKN,
                                        'redirect': 'example.com'})
