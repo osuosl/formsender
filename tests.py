@@ -688,7 +688,7 @@ class TestFormsender(unittest.TestCase):
         self.assertEquals(app.error, 'Duplicate Request')
 
     @patch('request_handler.validate_email')
-    def test_send_email_root(self):
+    def test_send_email_root(self, mock_validate_email):
         """
         Tests that the form is sent to the correct address.
 
@@ -716,20 +716,19 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
-        # Call send_email_root and assert sendmail was correctly called
+        # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
 
-    # @patch('request_handler.validate_email')
-    # def test_send_email_support(self):
+    @patch('request_handler.validate_email')
+    def test_send_email_support(self, mock_validate_email):
         """
         Tests that the form is sent to the correct address.
 
         Returns true if the form has been sent to support@osuosl.org
         False otherwise
-        """
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
@@ -752,12 +751,46 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
-        # Call send_email_root and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, 'support')
+        # Call send_email and assert sendmail was correctly called
+        handler.send_email(msg, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
+
+    @patch('request_handler.validate_email')
+    def test_send_email_default(self, mock_validate_email):
         """
+        Tests that the form is sent to the correct default address when
+        the 'send_to' field is not set.
+
+        Returns true if the form has been sent to support@osuosl.org
+        False otherwise
+        """
+        build = EnvironBuilder(method='POST',
+                               data={'name': 'Valid Guy',
+                                     'email': 'example@osuosl.org',
+                                     'send_to': '',
+                                     'last_name': '',
+                                     'tokn': conf.TOKN,
+                                     'redirect': 'example.com'})
+        env = builder.get_environ()
+        req = Request(env)
+
+        # Construct message for assertion
+        msg = handler.create_msg(req)
+        msg_send = MIMEText(str(msg))
+        msg_subj = handler.set_mail_subject(msg)
+        msg_send['Subject'] = msg_subj
+        msg_send['To'] = conf.EMAIL['support']
+
+        # Mock sendmail function
+        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+
+        # Call send_email and assert sendmail was correctly called
+        handler.send_email(msg, msg_subj)
+        smtplib.SMTP.sendmail.assert_called_with(conf.FROM
+                                                 conf.EMAIL['support']
+                                                 msg_send.as_string())
 
 
 if __name__ == '__main__':
