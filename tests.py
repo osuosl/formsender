@@ -766,13 +766,13 @@ class TestFormsender(unittest.TestCase):
         Returns true if the form has been sent to support@osuosl.org
         False otherwise
         """
-        build = EnvironBuilder(method='POST',
-                               data={'name': 'Valid Guy',
-                                     'email': 'example@osuosl.org',
-                                     'send_to': '',
-                                     'last_name': '',
-                                     'tokn': conf.TOKN,
-                                     'redirect': 'example.com'})
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'send_to': '',
+                                       'last_name': '',
+                                       'tokn': conf.TOKN,
+                                       'redirect': 'example.com'})
         env = builder.get_environ()
         req = Request(env)
 
