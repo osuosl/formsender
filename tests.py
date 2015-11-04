@@ -788,8 +788,8 @@ class TestFormsender(unittest.TestCase):
 
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj)
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM
-                                                 conf.EMAIL['support']
+        smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
+                                                 conf.EMAIL['support'],
                                                  msg_send.as_string())
 
 
