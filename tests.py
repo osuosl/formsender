@@ -781,7 +781,7 @@ class TestFormsender(unittest.TestCase):
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['support']
+        msg_send['To'] = conf.EMAIL['default']
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -789,7 +789,7 @@ class TestFormsender(unittest.TestCase):
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
-                                                 conf.EMAIL['support'],
+                                                 conf.EMAIL['default'],
                                                  msg_send.as_string())
 
 
