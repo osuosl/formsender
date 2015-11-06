@@ -57,8 +57,8 @@ class TestFormsender(unittest.TestCase):
         """
         Tests send_email
 
-        send_email returns True when it successfully sends an email and
-        False when unsuccessfull.
+        send_email returns True when it successfully sends an email to a
+        default address and False when unsuccessful.
         """
         # Build test environment
         builder = EnvironBuilder(method='POST',
@@ -75,7 +75,7 @@ class TestFormsender(unittest.TestCase):
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL
+        msg_send['To'] = conf.EMAIL['default']
 
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -84,7 +84,7 @@ class TestFormsender(unittest.TestCase):
         handler.create_app()
         handler.send_email(msg, msg_subj)
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
-                                                 conf.EMAIL,
+                                                 conf.EMAIL['default'],
                                                  msg_send.as_string())
 
     @patch('request_handler.validate_email')
@@ -736,7 +736,7 @@ class TestFormsender(unittest.TestCase):
                                        'send_to': 'support',
                                        'last_name': '',
                                        'tokn': conf.TOKN,
-                                       'redirect': 'example.com'})
+                                       'redirect': 'http://www.example.com'})
 
         env = builder.get_environ()
         req = Request(env)
@@ -761,7 +761,7 @@ class TestFormsender(unittest.TestCase):
     def test_send_email_default(self, mock_validate_email):
         """
         Tests that the form is sent to the correct default address when
-        the 'send_to' field is not set.
+        the 'send_to' field is set to an empty string.
 
         Returns true if the form has been sent to support@osuosl.org
         False otherwise
@@ -772,7 +772,7 @@ class TestFormsender(unittest.TestCase):
                                        'send_to': '',
                                        'last_name': '',
                                        'tokn': conf.TOKN,
-                                       'redirect': 'example.com'})
+                                       'redirect': 'http://www.example.com'})
         env = builder.get_environ()
         req = Request(env)
 
