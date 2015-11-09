@@ -368,17 +368,17 @@ def set_mail_subject(message):
     return 'Form Submission'
 
 
-def send_email(msg, subject):
+def send_email(msg, subject, emstr='default'):
     """Sets up and sends the email"""
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
-    msg_send['To'] = conf.EMAIL
+    msg_send['To'] = conf.EMAIL[emstr]
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
-        smtp.sendmail(conf.FROM, conf.EMAIL, msg_send.as_string())
+        smtp.sendmail(conf.FROM, conf.EMAIL[emstr], msg_send.as_string())
         smtp.quit()
     except RuntimeError:
         smtp.quit()
