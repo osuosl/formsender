@@ -44,7 +44,7 @@ Include required fields by setting the ``name`` property to the following:
 Optional Fields
 ---------------
 
-Formsender uses an additional optional field to help format your outgoing
+Formsender uses some additional optional fields to help format your outgoing
 email:
 
 * **mail_subject**
@@ -54,6 +54,17 @@ email:
     be a hidden field.
 
     example: ``<input type="hidden" name="mail_subject" value="FORM: New Test Submission" />``
+
+* **send_to**
+
+    sets email recipient to send_to's contents. This should be a string that
+    matches a key in the email dictionary found in conf.py. If send_to is not
+    included, the recipient will default to the ``default`` of the email dict.
+    This should be a hidden field.
+
+    example: ``<input type="hidden" name="send_to" value="another" />``
+
+    Note that the string, 'another', will map to its corresponding email.
 
 All Other Fields
 ----------------

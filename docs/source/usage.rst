@@ -9,7 +9,9 @@ directory. You can change the following variables to match your setup:
 
 .. code-block:: python
 
-    EMAIL = u'email@example.com'
+    EMAIL = {'default': 'email@example.com',
+             'example': 'email@example.com',
+             'another': 'another_email@example.com'}
     TOKN = u's0m3T0k3n$tr1ng'
     CEILING = 10
     DUPLICATE_CHECK_TIME = 3600
@@ -19,7 +21,10 @@ directory. You can change the following variables to match your setup:
     FROM = "formsender@osuosl.org"
     LOG_ADDR = '/dev/log'
 
-* ``EMAIL`` is where the form data will be sent.
+* ``EMAIL`` is a dictionary of emails. It contains the different email addresses
+  to which the form creator can send an email. This will be set in an optional
+  ``send_to`` field on the form. If the user decides not to include/fill out the
+  ``send_to`` field, an email should be sent to 'default'.
 * ``TOKN`` is the validating token from the form. This must match a hidden field
   in your form called 'tokn'. You can find and set the ``TOKN`` variable in your
   conf.py file. Just make sure you also set the hidden ``tokn`` field value to

@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
 
-EMAIL = u'email@example.com'
+EMAIL = {'default': 'support@osuosl.org',
+         'support': 'support@osuosl.org',
+         'root': 'root@osuosl.org'}
 TOKN = u'15674hsda//*q23%^13jnxccv3ds54sa4g4sa532323!OoRdsfISDIdks38*(dsfjk)aS'
 CEILING = 10
 DUPLICATE_CHECK_TIME = 3600  # seconds -- 60 seconds * 60 minutes
