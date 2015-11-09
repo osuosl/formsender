@@ -727,7 +727,7 @@ class TestFormsender(unittest.TestCase):
         """
         Tests that the form is sent to the correct address.
 
-        Returns true if the form has been sent to support@osuosl.orgi
+        Returns true if the form has been sent to support@osuosl.org
         Errors out if unsuccessful
         """
         builder = EnvironBuilder(method='POST',
