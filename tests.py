@@ -717,7 +717,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, email_str='root')
+        handler.send_email(msg, msg_subj, send_to_email='root')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
@@ -752,7 +752,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, email_str='support')
+        handler.send_email(msg, msg_subj, send_to_email='support')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
@@ -787,7 +787,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, email_str='default')
+        handler.send_email(msg, msg_subj, send_to_email='default')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
