@@ -44,7 +44,7 @@ Include required fields by setting the ``name`` property to the following:
 Optional Fields
 ---------------
 
-Formsender uses some additional optional field to help format your outgoing
+Formsender uses some additional optional fields to help format your outgoing
 email:
 
 * **mail_subject**
@@ -62,7 +62,7 @@ email:
     included, the recipient will default to the ``default`` of the email dict.
     This should be a hidden field.
 
-    example: ``<input type="hidden" name"send_to" value="another" />``
+    example: ``<input type="hidden" name="send_to" value="another" />``
 
     Note that the string, 'another', will map to its corresponding email.
 
