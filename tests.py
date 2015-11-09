@@ -58,7 +58,7 @@ class TestFormsender(unittest.TestCase):
         Tests send_email
 
         send_email returns True when it successfully sends an email to a
-        default address and False when unsuccessful.
+        default address and errors out when unsuccessful.
         """
         # Build test environment
         builder = EnvironBuilder(method='POST',
@@ -693,7 +693,7 @@ class TestFormsender(unittest.TestCase):
         Tests that the form is sent to the correct address.
 
         Returns true if form is sent to root@ousosl.org
-        False otherwise
+        Errors out if unsuccesful
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
@@ -717,7 +717,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, emstr='root')
+        handler.send_email(msg, msg_subj, email_str='root')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
@@ -727,8 +727,8 @@ class TestFormsender(unittest.TestCase):
         """
         Tests that the form is sent to the correct address.
 
-        Returns true if the form has been sent to support@osuosl.org
-        False otherwise
+        Returns true if the form has been sent to support@osuosl.orgi
+        Errors out if unsuccessful
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
@@ -752,7 +752,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, emstr='support')
+        handler.send_email(msg, msg_subj, email_str='support')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
@@ -764,7 +764,7 @@ class TestFormsender(unittest.TestCase):
         the 'send_to' field is set to an empty string.
 
         Returns true if the form has been sent to support@osuosl.org
-        False otherwise
+        Errors out if unsuccessful
         """
         builder = EnvironBuilder(method='POST',
                                  data={'name': 'Valid Guy',
@@ -787,7 +787,7 @@ class TestFormsender(unittest.TestCase):
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, emstr='default')
+        handler.send_email(msg, msg_subj, email_str='default')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
