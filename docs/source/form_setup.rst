@@ -32,9 +32,9 @@ Include required fields by setting the ``name`` property to the following:
 
     example: ``<input type="hidden" name="last_name" value=""/>``
 
-* **tokn** - contents must match TOKN in conf.py, must be hidden
+* **token** - contents must match TOKEN in conf.py, must be hidden
 
-    example: ``<input type="hidden" name="tokn" value="s0m3T0k3n$tr1ng" />``
+    example: ``<input type="hidden" name="token" value="s0m3T0k3n$tr1ng" />``
 
 * **redirect** - url to redirect to on form submission, if an error occurs a
   query string will be added with an error message. Should be hidden.

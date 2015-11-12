@@ -314,8 +314,8 @@ def is_hidden_field_empty(request):
 
 
 def is_valid_token(request):
-    """Make sure request's 'tokn' field matches TOKN in conf.py"""
-    if request.form['tokn'] == conf.TOKN:
+    """Make sure request's 'token' field matches TOKEN in conf.py"""
+    if request.form['token'] == conf.TOKEN:
         return True
     return False
 
@@ -335,7 +335,7 @@ def strip_query(url):
 def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
-    hidden_fields = ['redirect', 'last_name', 'tokn', 'op',
+    hidden_fields = ['redirect', 'last_name', 'token', 'op',
                      'name', 'email', 'mail_subject']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"

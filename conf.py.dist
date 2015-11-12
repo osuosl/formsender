@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 EMAIL = {'default': 'support@osuosl.org',
          'support': 'support@osuosl.org',
          'root': 'root@osuosl.org'}
-TOKN = u'15674hsda//*q23%^13jnxccv3ds54sa4g4sa532323!OoRdsfISDIdks38*(dsfjk)aS'
+TOKEN = u'15674hsda//*q23%^13jnxccv3ds54sa4g4sa532323!OoRdsfISDIdks38*(dsfjk)aS'
 CEILING = 10
 DUPLICATE_CHECK_TIME = 3600  # seconds -- 60 seconds * 60 minutes
 HOST = "0.0.0.0"
