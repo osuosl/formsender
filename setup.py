@@ -15,7 +15,7 @@ dependencies = [
 
 setup(
     name='formsender',
-    version='0.1.1',
+    version='0.1.2',
     install_requires=dependencies,
     author=u'OSU Open Source Lab',
     author_email='support@osuosl.org',
