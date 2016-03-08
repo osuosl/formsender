@@ -97,8 +97,8 @@ class Forms(object):
             self.error = 'Invalid Name'
             error_number = 2
             invalid_option = 'name'
-        elif (not is_hidden_field_empty(request)
-              or not is_valid_token(request)):
+        elif (not is_hidden_field_empty(request) or
+              not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
             invalid_option = 'name'
