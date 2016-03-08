@@ -637,8 +637,6 @@ class TestFormsender(unittest.TestCase):
         subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
 
-
-########NEW TESTS START HERE##########
     def test_send_to_address(self):
         """
         send_to_adress(message) returns the string in message['send_to']
@@ -700,8 +698,6 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         address = handler.send_to_address(message)
         self.assertEqual(address, 'default')
-########NEW TESTS END HERE###########
-
 
     @patch('request_handler.validate_email')
     def test_same_submission(self, mock_validate_email):
