@@ -129,7 +129,8 @@ class Forms(object):
         if message:
             self.logger.info('formsender: sending email from: %s',
                              message['email'])
-            send_email(format_message(message), set_mail_subject(message))
+            send_email(format_message(message), set_mail_subject(message), send_to_address(message))
+            #print "handled"
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -366,6 +367,22 @@ def set_mail_subject(message):
         return message['mail_subject']
     # Otherwise return default
     return 'Form Submission'
+
+
+def send_to_address(message):
+    """
+    Checks whether the 'send_to' field has been set in
+    the form
+
+    Default is 'support@osuosl.org'
+    """
+    # If a send to address is included in html form, return the assoc. string
+    if 'send_to' in message and message['send_to']:
+        print message['send_to']
+        return message['send_to']
+    # Otherwise, return default
+    #####print 'was sent to default'
+    return 'default'
 
 
 def send_email(msg, subject, send_to_email='default'):
