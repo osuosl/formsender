@@ -97,8 +97,8 @@ class Forms(object):
             self.error = 'Invalid Name'
             error_number = 2
             invalid_option = 'name'
-        elif (not is_hidden_field_empty(request)
-              or not is_valid_token(request)):
+        elif (not is_hidden_field_empty(request) or
+              not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
             invalid_option = 'name'
@@ -129,7 +129,8 @@ class Forms(object):
         if message:
             self.logger.info('formsender: sending email from: %s',
                              message['email'])
-            send_email(format_message(message), set_mail_subject(message))
+            send_email(format_message(message), set_mail_subject(message),
+                       send_to_address(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -336,7 +337,7 @@ def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
-                     'name', 'email', 'mail_subject']
+                     'name', 'email', 'mail_subject', 'send_to']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
@@ -366,6 +367,19 @@ def set_mail_subject(message):
         return message['mail_subject']
     # Otherwise return default
     return 'Form Submission'
+
+
+def send_to_address(message):
+    """
+    Returns a string to be used as the address the email is being sent to
+
+    Default is 'support@osuosl.org'
+    """
+    # If a send to address is included in html form, return its assoc. string
+    if 'send_to' in message and message['send_to']:
+        return message['send_to']
+    # Otherwise, return default
+    return 'default'
 
 
 def send_email(msg, subject, send_to_email='default'):

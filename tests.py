@@ -637,6 +637,68 @@ class TestFormsender(unittest.TestCase):
         subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
 
+    def test_send_to_address(self):
+        """
+        send_to_adress(message) returns the string in message['send_to']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'send_to': 'support',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        address = handler.send_to_address(message)
+        self.assertEqual(address, 'support')
+
+    def test_send_to_address_with_nothing(self):
+        """
+        send_to_adress(message) returns the string in message['send_to']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        address = handler.send_to_address(message)
+        self.assertEqual(address, 'default')
+
+    def test_send_to_address_with_key_only(self):
+        """
+        send_to_adress(message) returns the string in message['send_to']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'send_to': '',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        address = handler.send_to_address(message)
+        self.assertEqual(address, 'default')
+
     @patch('request_handler.validate_email')
     def test_same_submission(self, mock_validate_email):
         """
