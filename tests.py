@@ -699,6 +699,74 @@ class TestFormsender(unittest.TestCase):
         address = handler.send_to_address(message)
         self.assertEqual(address, 'default')
 
+###################### NEW TESTS START HERE ################################
+    def test_set_mail_from(self):
+        """
+        set_mail_from(message) returns the string in message['email_from']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_from': 'thai@osuosl.org',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
+        #May want to change this email to be something else later on
+        self.assertEqual(mail_from, 'thai@osuosl.org')
+
+    def test_set_mail_from_with_nothing(self):
+        """
+        set_mail_from(message) returns the string in message['email_from']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
+        #May want to change this email to be something else later on
+        self.assertEqual(mail_from, 'default')
+
+    def test_set_mail_from_with_key_only(self):
+        """
+        set_mail_from(message) returns the string in message['email_from']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_from': '',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
+        #May want to change this email to be something else later on
+        self.assertEqual(mail_from, 'default')
+
+############################################################################
+
     @patch('request_handler.validate_email')
     def test_same_submission(self, mock_validate_email):
         """
