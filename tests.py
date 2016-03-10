@@ -80,7 +80,7 @@ class TestFormsender(unittest.TestCase):
         # Set 'from' field
         mail_from = handler.set_mail_from(msg)
         if (mail_from == 'from_default'):
-          mail_from = conf.FROM[mail_from]
+            mail_from = conf.FROM[mail_from]
 
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -642,7 +642,6 @@ class TestFormsender(unittest.TestCase):
         subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
 
-###################### NEW TESTS START HERE ################################
     def test_set_mail_from(self):
         """
         set_mail_from(message) returns the string in message['email_from']
@@ -705,8 +704,6 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         mail_from = handler.set_mail_from(message)
         self.assertEqual(mail_from, 'from_default')
-
-############################################################################
 
     def test_send_to_address(self):
         """
@@ -852,7 +849,7 @@ class TestFormsender(unittest.TestCase):
         # Set 'from' field
         mail_from = handler.set_mail_from(msg)
         if (mail_from == 'from_default'):
-          mail_from = conf.FROM[mail_from]
+            mail_from = conf.FROM[mail_from]
 
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='root')
@@ -889,7 +886,7 @@ class TestFormsender(unittest.TestCase):
         # Set 'from' field
         mail_from = handler.set_mail_from(msg)
         if (mail_from == 'from_default'):
-          mail_from = conf.FROM[mail_from]
+            mail_from = conf.FROM[mail_from]
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
@@ -929,7 +926,7 @@ class TestFormsender(unittest.TestCase):
         # Set 'from' field
         mail_from = handler.set_mail_from(msg)
         if (mail_from == 'from_default'):
-          mail_from = conf.FROM[mail_from]
+            mail_from = conf.FROM[mail_from]
 
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
