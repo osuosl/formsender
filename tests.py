@@ -77,18 +77,13 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
 
-        # Set 'from' field
-        mail_from = handler.set_mail_from(msg)
-        if (mail_from == 'from_default'):
-            mail_from = conf.FROM[mail_from]
-
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was called correctly
         handler.create_app()
         handler.send_email(msg, msg_subj)
-        smtplib.SMTP.sendmail.assert_called_with(mail_from,
+        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
@@ -853,7 +848,7 @@ class TestFormsender(unittest.TestCase):
 
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='root')
-        smtplib.SMTP.sendmail.assert_called_with(mail_from,
+        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
 
@@ -883,17 +878,12 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['support']
 
-        # Set 'from' field
-        mail_from = handler.set_mail_from(msg)
-        if (mail_from == 'from_default'):
-            mail_from = conf.FROM[mail_from]
-
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='support')
-        smtplib.SMTP.sendmail.assert_called_with(mail_from,
+        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
 
@@ -923,17 +913,12 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
 
-        # Set 'from' field
-        mail_from = handler.set_mail_from(msg)
-        if (mail_from == 'from_default'):
-            mail_from = conf.FROM[mail_from]
-
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, send_to_email='default')
-        smtplib.SMTP.sendmail.assert_called_with(mail_from,
+        handler.send_email(msg, msg_subj)
+        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
