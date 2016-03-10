@@ -841,11 +841,6 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
-        # Set 'from' field
-        mail_from = handler.set_mail_from(msg)
-        if (mail_from == 'from_default'):
-            mail_from = conf.FROM[mail_from]
-
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='root')
         smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],

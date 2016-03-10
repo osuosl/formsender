@@ -412,7 +412,7 @@ def send_email(msg, subject, send_to_email='default',
                           msg_send.as_string())
             smtp.quit()
         else:
-            smtp.sendmail(conf.FROM[mail_from],
+            smtp.sendmail(conf.FROM['from_default'],
                           conf.EMAIL[send_to_email],
                           msg_send.as_string())
             smtp.quit()
