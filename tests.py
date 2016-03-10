@@ -656,7 +656,7 @@ class TestFormsender(unittest.TestCase):
         # Create message from request and call set_mail_subject()
         message = handler.create_msg(req)
         mail_from = handler.set_mail_from(message)
-        #May want to change this email to be something else later on
+        # May want to change this email to be something else later on
         self.assertEqual(mail_from, 'thai@osuosl.org')
 
     def test_set_mail_from_with_nothing(self):
