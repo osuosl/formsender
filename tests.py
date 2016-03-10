@@ -77,13 +77,18 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
 
+        # Set 'from' field
+        mail_from = handler.set_mail_from(msg)
+        if (mail_from == 'from_default'):
+          mail_from = conf.FROM[mail_from]
+
         # Mock sendmail function so it doesn't send an actual email
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was called correctly
         handler.create_app()
         handler.send_email(msg, msg_subj)
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
+        smtplib.SMTP.sendmail.assert_called_with(mail_from,
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
@@ -637,6 +642,72 @@ class TestFormsender(unittest.TestCase):
         subject = handler.set_mail_subject(message)
         self.assertEqual(subject, 'Form Submission')
 
+###################### NEW TESTS START HERE ################################
+    def test_set_mail_from(self):
+        """
+        set_mail_from(message) returns the string in message['email_from']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_from': 'thai@osuosl.org',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
+        #May want to change this email to be something else later on
+        self.assertEqual(mail_from, 'thai@osuosl.org')
+
+    def test_set_mail_from_with_nothing(self):
+        """
+        set_mail_from(message) returns the string in message['email_from']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
+        self.assertEqual(mail_from, 'from_default')
+
+    def test_set_mail_from_with_key_only(self):
+        """
+        set_mail_from(message) returns the string in message['email_from']
+        when it is present, otherwise it returns 'default'
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_from': '',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        mail_from = handler.set_mail_from(message)
+        self.assertEqual(mail_from, 'from_default')
+
+############################################################################
+
     def test_send_to_address(self):
         """
         send_to_adress(message) returns the string in message['send_to']
@@ -698,74 +769,6 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         address = handler.send_to_address(message)
         self.assertEqual(address, 'default')
-
-###################### NEW TESTS START HERE ################################
-    def test_set_mail_from(self):
-        """
-        set_mail_from(message) returns the string in message['email_from']
-        when it is present, otherwise it returns 'default'
-        """
-
-        # Build test environment
-        builder = EnvironBuilder(method='POST',
-                                 data={'name': 'Valid Guy',
-                                       'email': 'example@osuosl.org',
-                                       'redirect': 'http://www.example.com',
-                                       'last_name': '',
-                                       'mail_from': 'thai@osuosl.org',
-                                       'token': conf.TOKEN})
-        env = builder.get_environ()
-        req = Request(env)
-        # Create message from request and call set_mail_subject()
-        message = handler.create_msg(req)
-        mail_from = handler.set_mail_from(message)
-        #May want to change this email to be something else later on
-        self.assertEqual(mail_from, 'thai@osuosl.org')
-
-    def test_set_mail_from_with_nothing(self):
-        """
-        set_mail_from(message) returns the string in message['email_from']
-        when it is present, otherwise it returns 'default'
-        """
-
-        # Build test environment
-        builder = EnvironBuilder(method='POST',
-                                 data={'name': 'Valid Guy',
-                                       'email': 'example@osuosl.org',
-                                       'redirect': 'http://www.example.com',
-                                       'last_name': '',
-                                       'token': conf.TOKEN})
-        env = builder.get_environ()
-        req = Request(env)
-        # Create message from request and call set_mail_subject()
-        message = handler.create_msg(req)
-        mail_from = handler.set_mail_from(message)
-        #May want to change this email to be something else later on
-        self.assertEqual(mail_from, 'default')
-
-    def test_set_mail_from_with_key_only(self):
-        """
-        set_mail_from(message) returns the string in message['email_from']
-        when it is present, otherwise it returns 'default'
-        """
-
-        # Build test environment
-        builder = EnvironBuilder(method='POST',
-                                 data={'name': 'Valid Guy',
-                                       'email': 'example@osuosl.org',
-                                       'redirect': 'http://www.example.com',
-                                       'last_name': '',
-                                       'mail_from': '',
-                                       'token': conf.TOKEN})
-        env = builder.get_environ()
-        req = Request(env)
-        # Create message from request and call set_mail_subject()
-        message = handler.create_msg(req)
-        mail_from = handler.set_mail_from(message)
-        #May want to change this email to be something else later on
-        self.assertEqual(mail_from, 'default')
-
-############################################################################
 
     @patch('request_handler.validate_email')
     def test_same_submission(self, mock_validate_email):
@@ -846,9 +849,14 @@ class TestFormsender(unittest.TestCase):
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
+        # Set 'from' field
+        mail_from = handler.set_mail_from(msg)
+        if (mail_from == 'from_default'):
+          mail_from = conf.FROM[mail_from]
+
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='root')
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
+        smtplib.SMTP.sendmail.assert_called_with(mail_from,
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
 
@@ -878,12 +886,17 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['support']
 
+        # Set 'from' field
+        mail_from = handler.set_mail_from(msg)
+        if (mail_from == 'from_default'):
+          mail_from = conf.FROM[mail_from]
+
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='support')
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
+        smtplib.SMTP.sendmail.assert_called_with(mail_from,
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
 
@@ -913,12 +926,17 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
 
+        # Set 'from' field
+        mail_from = handler.set_mail_from(msg)
+        if (mail_from == 'from_default'):
+          mail_from = conf.FROM[mail_from]
+
         # Mock sendmail function
         smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
         # Call send_email and assert sendmail was correctly called
         handler.send_email(msg, msg_subj, send_to_email='default')
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM,
+        smtplib.SMTP.sendmail.assert_called_with(mail_from,
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
