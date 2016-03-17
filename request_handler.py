@@ -359,14 +359,37 @@ def convert_key_to_title(snake_case_key):
 
 def set_mail_subject(message):
     """
-    Returns a string to be used as a subject in an email
-    Default is 'Form Submission'
+    Returns a string to be used as a subject in an email, format:
+
+    message['mail_subject_prefix']: message[message['mail_subject_key']
+        or
+    message['mail_subject_prefix']
+        or
+    message[message['mail_subject_key']]
+        or the default
+    'Form Submission'
     """
-    # If key exists in the message dict and has content return the content
-    if 'mail_subject' in message and message['mail_subject']:
-        return message['mail_subject']
-    # Otherwise return default
-    return 'Form Submission'
+    mail_subject = ''
+    # If mail_subject_prefix exists in the message dict and has content, add
+    # it to the mail_subject string. Then check if mail_subject_key also exists
+    # and points to valid data and append if necessary.
+    if 'mail_subject_prefix' in message and message['mail_subject_prefix']:
+        mail_subject += message['mail_subject_prefix']
+        if ('mail_subject_key' in message
+                and message['mail_subject_key']
+                and message['mail_subject_key'] in message
+                and message[message['mail_subject_key']]):
+            mail_subject += ": {}".format(message[message['mail_subject_key']])
+
+    # If mail_subject_key is in the message and the field it points to exists,
+    # add it to the mail_subject. It is ok if it is an empty string, because
+    # it will just be ignored
+    elif ('mail_subject_key' in message
+            and message['mail_subject_key'] in message):
+        mail_subject += message[message['mail_subject_key']]
+
+    # Otherwise mail_subject if it has something or the default
+    return mail_subject if mail_subject else 'Form Submission'
 
 
 def send_to_address(message):
