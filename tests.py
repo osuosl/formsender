@@ -577,8 +577,9 @@ class TestFormsender(unittest.TestCase):
 
     def test_set_mail_subject_with_both_options(self):
         """
-        set_mail_subject(message) returns the string in message['mail_subject']
-        when it is present, otherwise it returns 'Form Submission'
+        set_mail_subject(message) returns the string
+        "message['mail_subject_prefix']: message[message['mail_subject_key']"
+        when both are available
         """
 
         # Build test environment
@@ -599,8 +600,8 @@ class TestFormsender(unittest.TestCase):
 
     def test_set_mail_subject_with_subj_prefix(self):
         """
-        set_mail_subject(message) returns the string in message['mail_subject']
-        when it is present, otherwise it returns 'Form Submission'
+        set_mail_subject(message) returns the string
+        "message['mail_subject_prefix']" when it is the only field available
         """
 
         # Build test environment
@@ -619,8 +620,9 @@ class TestFormsender(unittest.TestCase):
 
     def test_set_mail_subject_with_subj_key(self):
         """
-        set_mail_subject(message) returns the string in message['mail_subject']
-        when it is present, otherwise it returns 'Form Submission'
+        set_mail_subject(message) returns the string
+        "message[message['mail_subject_prefix']]" when it is the only field
+        available
         """
 
         # Build test environment
@@ -640,8 +642,8 @@ class TestFormsender(unittest.TestCase):
 
     def test_set_mail_subject_with_subj_key_missing(self):
         """
-        set_mail_subject(message) returns the string in message['mail_subject']
-        when it is present, otherwise it returns 'Form Submission'
+        set_mail_subject(message) returns the default string 'Form Submission'
+        when no configuration fields are available
         """
 
         # Build test environment

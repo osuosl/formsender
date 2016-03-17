@@ -375,17 +375,17 @@ def set_mail_subject(message):
     # and points to valid data and append if necessary.
     if 'mail_subject_prefix' in message and message['mail_subject_prefix']:
         mail_subject += message['mail_subject_prefix']
-        if ('mail_subject_key' in message
-                and message['mail_subject_key']
-                and message['mail_subject_key'] in message
-                and message[message['mail_subject_key']]):
+        if ('mail_subject_key' in message and
+                message['mail_subject_key'] and
+                message['mail_subject_key'] in message and
+                message[message['mail_subject_key']]):
             mail_subject += ": {}".format(message[message['mail_subject_key']])
 
     # If mail_subject_key is in the message and the field it points to exists,
     # add it to the mail_subject. It is ok if it is an empty string, because
     # it will just be ignored
-    elif ('mail_subject_key' in message
-            and message['mail_subject_key'] in message):
+    elif ('mail_subject_key' in message and
+            message['mail_subject_key'] in message):
         mail_subject += message[message['mail_subject_key']]
 
     # Otherwise mail_subject if it has something or the default
