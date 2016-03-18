@@ -99,6 +99,16 @@ email:
 
     Note that the string, 'another', will map to its corresponding email.
 
+* **mail_from**
+
+    sets email sender to mail_from's contents. This should be either a valid
+    email or the string 'default_from' (matching the dictionary found in
+    conf.py). If mail_from is not included in the form, the address will
+    default to ``from_default`` of the email dict. This should be a hidden
+    field.
+
+    example: ``<input type="hidden" name="mail_from" value="randouser@example.org" />``
+
 All Other Fields
 ----------------
 

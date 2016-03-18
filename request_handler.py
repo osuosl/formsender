@@ -130,7 +130,7 @@ class Forms(object):
             self.logger.info('formsender: sending email from: %s',
                              message['email'])
             send_email(format_message(message), set_mail_subject(message),
-                       send_to_address(message))
+                       send_to_address(message), set_mail_from(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -392,6 +392,18 @@ def set_mail_subject(message):
     return mail_subject if mail_subject else 'Form Submission'
 
 
+def set_mail_from(message):
+    """
+    Returns a string to be used to fill the 'from' field of and email
+    If no from address is provided in the html form, return 'from_default'
+    """
+    # If a from address is included in html form, return it
+    if 'mail_from' in message and message['mail_from']:
+        return message['mail_from']
+    # Otherwise, return from_default
+    return 'from_default'
+
+
 def send_to_address(message):
     """
     Returns a string to be used as the address the email is being sent to
@@ -405,20 +417,28 @@ def send_to_address(message):
     return 'default'
 
 
-def send_email(msg, subject, send_to_email='default'):
+def send_email(msg, subject, send_to_email='default',
+               mail_from='from_default'):
     """Sets up and sends the email"""
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
     msg_send['To'] = conf.EMAIL[send_to_email]
+
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
-        smtp.sendmail(conf.FROM,
-                      conf.EMAIL[send_to_email],
-                      msg_send.as_string())
-        smtp.quit()
+        if (mail_from != 'from_default'):
+            smtp.sendmail(mail_from,
+                          conf.EMAIL[send_to_email],
+                          msg_send.as_string())
+            smtp.quit()
+        else:
+            smtp.sendmail(conf.FROM[mail_from],
+                          conf.EMAIL[send_to_email],
+                          msg_send.as_string())
+            smtp.quit()
     except RuntimeError:
         smtp.quit()
 
