@@ -51,23 +51,31 @@ email:
 
     sets outgoing email subject based on the contents of these fields. If both
     fields are available and ``mail_subject_key`` contains a valid field name
-    for another field in the form:
+    for another field in the form, the email subject will be formatted as
+    follows (note that ``mail_subject_key`` sets the subject to the contents of
+    the user input in the field with a name matching the value in
+    ``mail_subject_key``):
     
         form['mail_subject_prefix']: form[form['mail_subject_key']
+        example: Hosting Request: Linux Foundation
     
     If only ``mail_subject_prefix`` is available and valid:
 
         form['mail_subject_prefix']
+        example: Hosting Request
     
     If only ``mail_subject_key`` is available and valid:
 
         form[form['mail_subject_key']]
+        example: Linux Foundation
     
-    If neither fields are available or valid:
+    If neither field is available or valid, the email subject will be set to
+    the default:
 
         'Form Submission'
     
-    These should both be hidden fields
+    ``mail_subject_prefix`` and ``mail_subject_key`` should both be hidden
+    fields
 
     example: 
     
