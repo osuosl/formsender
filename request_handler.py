@@ -19,6 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
+from collections import OrderedDict
 import logging
 import logging.handlers
 import conf
@@ -268,7 +269,7 @@ def create_app(with_static=True):
 
 def create_msg(request):
     """Creates the message to be sent in the email"""
-    message = dict()
+    message = OrderedDict()
     if request.method == 'POST':
         # Takes the information from the request and puts it into the message
         # dict. request.form cannot be returned directly because it is a
@@ -279,7 +280,6 @@ def create_msg(request):
         if message:
             message['redirect'] = strip_query(message['redirect'])
             return message
-        return None
     return None
 
 
@@ -345,7 +345,7 @@ def format_message(msg):
                  .format(msg['name'], msg['email']))
     # Write each formatted key in title case and corresponding message to
     # f_message, each key and message is separated by two lines.
-    for key in sorted(msg):
+    for key in msg:
         if key not in hidden_fields:
             f_message += ('{0}:\n\n{1}\n\n'.format(convert_key_to_title(key),
                                                    msg[key]))

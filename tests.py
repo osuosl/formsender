@@ -5,6 +5,7 @@ from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
 from email.mime.text import MIMEText
+from collections import OrderedDict
 import conf
 import request_handler as handler
 
@@ -854,6 +855,41 @@ class TestFormsender(unittest.TestCase):
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
+    def test_email_order(self):
+        """
+        Tests that email is formatted in the correct order.
+        """
+        ordered_data = OrderedDict()
+        ordered_data['name'] = 'Valid Guy'
+        ordered_data['email'] = 'example@osuosl.org'
+        ordered_data['last_name'] = ''
+        ordered_data['project_name'] = 'Linux Foundation'
+        ordered_data['should_be_middle'] = 'Yes'
+        ordered_data['should_be_last'] = 'Yes'
+        ordered_data['token'] = conf.TOKEN
+        ordered_data['redirect'] = 'http://www.example.com'
+
+        builder = EnvironBuilder(method='POST', data=ordered_data)
+
+        env = builder.get_environ()
+        req = Request(env)
+
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Project Name:\n\n"
+                          "Linux Foundation\n\n"
+                          "Should Be Middle:\n\n"
+                          "Yes\n\n"
+                          "Should Be Last:\n\n"
+                          "Yes\n\n")
+        
+        message = handler.create_msg(req)
+        formatted_message = handler.format_message(message)
+        self.assertEqual(formatted_message, target_message)
 
 if __name__ == '__main__':
     unittest.main()
