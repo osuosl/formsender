@@ -649,7 +649,7 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'mail_from': 'thai@osuosl.org',
+                                       'mail_from': 'randouser@example.org',
                                        'token': conf.TOKEN})
         env = builder.get_environ()
         req = Request(env)
@@ -657,7 +657,7 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         mail_from = handler.set_mail_from(message)
         # May want to change this email to be something else later on
-        self.assertEqual(mail_from, 'thai@osuosl.org')
+        self.assertEqual(mail_from, 'randouser@example.org')
 
     def test_set_mail_from_with_nothing(self):
         """
