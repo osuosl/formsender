@@ -575,10 +575,11 @@ class TestFormsender(unittest.TestCase):
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
 
-    def test_set_mail_subject_with_subj(self):
+    def test_set_mail_subject_with_both_options(self):
         """
-        set_mail_subject(message) returns the string in message['mail_subject']
-        when it is present, otherwise it returns 'Form Submission'
+        set_mail_subject(message) returns the string
+        "message['mail_subject_prefix']: message[message['mail_subject_key']"
+        when both are available
         """
 
         # Build test environment
@@ -587,14 +588,77 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'mail_subject': 'Test Form',
+                                       'mail_subject_prefix': 'Hosting',
+                                       'mail_subject_key': 'project',
+                                       'project': 'PGD',
                                        'token': conf.TOKEN})
         env = builder.get_environ()
         req = Request(env)
         # Create message from request and call set_mail_subject()
         message = handler.create_msg(req)
-        subject = handler.set_mail_subject(message)
-        self.assertEqual(subject, 'Test Form')
+        self.assertEqual(handler.set_mail_subject(message), 'Hosting: PGD')
+
+    def test_set_mail_subject_with_subj_prefix(self):
+        """
+        set_mail_subject(message) returns the string
+        "message['mail_subject_prefix']" when it is the only field available
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_subject_prefix': 'Hosting',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        self.assertEqual(handler.set_mail_subject(message), 'Hosting')
+
+    def test_set_mail_subject_with_subj_key(self):
+        """
+        set_mail_subject(message) returns the string
+        "message[message['mail_subject_prefix']]" when it is the only field
+        available
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_subject_key': 'project',
+                                       'project': 'PGD',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        self.assertEqual(handler.set_mail_subject(message), 'PGD')
+
+    def test_set_mail_subject_with_subj_key_missing(self):
+        """
+        set_mail_subject(message) returns the default string 'Form Submission'
+        when no configuration fields are available
+        """
+
+        # Build test environment
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'mail_subject_key': 'project',
+                                       'token': conf.TOKEN})
+        env = builder.get_environ()
+        req = Request(env)
+        # Create message from request and call set_mail_subject()
+        message = handler.create_msg(req)
+        self.assertEqual(handler.set_mail_subject(message), 'Form Submission')
 
     def test_set_mail_subject_with_nothing(self):
         """
