@@ -127,8 +127,21 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
+            self.logger.info('formsender: name is: %s', message['name'])
             self.logger.info('formsender: sending email from: %s',
                              message['email'])
+            # The following are optional fields, so first check that they exist
+            # in the message
+            if 'project' in message:
+                self.logger.info('formsender: project is: %s',
+                                 message['project'])
+            if 'send_to' in message:
+                self.logger.info('formsender: sending email to: %s',
+                                 message['send_to'])
+            if 'mail_from' in message:
+                self.logger.info('formsender: sending email from: %s',
+                                 message['mail_from'])
+
             send_email(format_message(message), set_mail_subject(message),
                        send_to_address(message), set_mail_from(message))
             redirect_url = message['redirect']
