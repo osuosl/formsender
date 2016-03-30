@@ -127,19 +127,19 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            self.logger.info('formsender: name is: %s', message['name'])
-            self.logger.info('formsender: sending email from: %s',
+            self.logger.debug('formsender: name is: %s', message['name'])
+            self.logger.debug('formsender: sending email from: %s',
                              message['email'])
             # The following are optional fields, so first check that they exist
             # in the message
-            if 'project' in message:
-                self.logger.info('formsender: project is: %s',
+            if 'project' in message and message['project']:
+                self.logger.debug('formsender: project is: %s',
                                  message['project'])
-            if 'send_to' in message:
-                self.logger.info('formsender: sending email to: %s',
+            if 'send_to' in message and message['send_to']:
+                self.logger.debug('formsender: sending email to: %s',
                                  message['send_to'])
-            if 'mail_from' in message:
-                self.logger.info('formsender: sending email from: %s',
+            if 'mail_from' in message and message['mail_from']:
+                self.logger.debug('formsender: sending email from: %s',
                                  message['mail_from'])
 
             send_email(format_message(message), set_mail_subject(message),
@@ -267,7 +267,7 @@ def create_app(with_static=True):
     formatter = logging.Formatter('%(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Initiate rate/duplicate controller and application
     controller = Controller()
