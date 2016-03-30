@@ -141,6 +141,8 @@ class Forms(object):
             if 'mail_from' in message and message['mail_from']:
                 self.logger.debug('formsender: sending email from: %s',
                                   message['mail_from'])
+            # Should log full request
+            self.logger.debug('formsender message: %s', message)
 
             send_email(format_message(message), set_mail_subject(message),
                        send_to_address(message), set_mail_from(message))
