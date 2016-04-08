@@ -132,9 +132,6 @@ class Forms(object):
                               message['email'])
             # The following are optional fields, so first check that they exist
             # in the message
-            if 'project' in message and message['project']:
-                self.logger.debug('formsender: project is: %s',
-                                  message['project'])
             if 'send_to' in message and message['send_to']:
                 self.logger.debug('formsender: sending email to: %s',
                                   message['send_to'])
