@@ -47,13 +47,46 @@ Optional Fields
 Formsender uses some additional optional fields to help format your outgoing
 email:
 
-* **mail_subject**
+* **mail_subject_prefix** and **mail_subject_key**
 
-    sets outgoing email subject to mail_subject's contents. If mail_subject is
-    not included, the subject will default to ``Form Submission``. This should
-    be a hidden field.
+    sets outgoing email subject based on the contents of these fields. If both
+    fields are available and ``mail_subject_key`` contains a valid field name
+    for another field in the form, the email subject will be formatted as
+    follows (note that ``mail_subject_key`` sets the subject to the contents of
+    the user input in the field with a name matching the value in
+    ``mail_subject_key``):
+    
+        form['mail_subject_prefix']: form[form['mail_subject_key']
+        example: Hosting Request: Linux Foundation
+    
+    If only ``mail_subject_prefix`` is available and valid:
 
-    example: ``<input type="hidden" name="mail_subject" value="FORM: New Test Submission" />``
+        form['mail_subject_prefix']
+        example: Hosting Request
+    
+    If only ``mail_subject_key`` is available and valid:
+
+        form[form['mail_subject_key']]
+        example: Linux Foundation
+    
+    If neither field is available or valid, the email subject will be set to
+    the default:
+
+        'Form Submission'
+    
+    ``mail_subject_prefix`` and ``mail_subject_key`` should both be hidden
+    fields
+
+    example: 
+    
+    .. code-block:: html
+    
+      <input type="hidden" name="mail_subject_prefix" value="Hosting Request" />
+      <input type="hidden" name="mail_subject_key" value="project" />
+      <input type="text" name="project" value="" size="60" maxlength="128" />
+
+    If the user sets the project field to "Linux Foundation" the mail subject
+    will be ``Hosting Request: Linux Foundation``
 
 * **send_to**
 
@@ -65,6 +98,16 @@ email:
     example: ``<input type="hidden" name="send_to" value="another" />``
 
     Note that the string, 'another', will map to its corresponding email.
+
+* **mail_from**
+
+    sets email sender to mail_from's contents. This should be either a valid
+    email or the string 'default_from' (matching the dictionary found in
+    conf.py). If mail_from is not included in the form, the address will
+    default to ``from_default`` of the email dict. This should be a hidden
+    field.
+
+    example: ``<input type="hidden" name="mail_from" value="randouser@example.org" />``
 
 All Other Fields
 ----------------

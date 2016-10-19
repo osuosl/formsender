@@ -97,8 +97,8 @@ class Forms(object):
             self.error = 'Invalid Name'
             error_number = 2
             invalid_option = 'name'
-        elif (not is_hidden_field_empty(request)
-              or not is_valid_token(request)):
+        elif (not is_hidden_field_empty(request) or
+              not is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
             invalid_option = 'name'
@@ -127,9 +127,22 @@ class Forms(object):
         """
         message = create_msg(request)
         if message:
-            self.logger.info('formsender: sending email from: %s',
-                             message['email'])
-            send_email(format_message(message), set_mail_subject(message))
+            self.logger.debug('formsender: name is: %s', message['name'])
+            self.logger.debug('formsender: sending email from: %s',
+                              message['email'])
+            # The following are optional fields, so first check that they exist
+            # in the message
+            if 'send_to' in message and message['send_to']:
+                self.logger.debug('formsender: sending email to: %s',
+                                  message['send_to'])
+            if 'mail_from' in message and message['mail_from']:
+                self.logger.debug('formsender: sending email from: %s',
+                                  message['mail_from'])
+            # Should log full request
+            self.logger.debug('formsender message: %s', message)
+
+            send_email(format_message(message), set_mail_subject(message),
+                       send_to_address(message), set_mail_from(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -253,7 +266,7 @@ def create_app(with_static=True):
     formatter = logging.Formatter('%(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Initiate rate/duplicate controller and application
     controller = Controller()
@@ -336,7 +349,7 @@ def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
-                     'name', 'email', 'mail_subject']
+                     'name', 'email', 'mail_subject', 'send_to']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
@@ -358,30 +371,86 @@ def convert_key_to_title(snake_case_key):
 
 def set_mail_subject(message):
     """
-    Returns a string to be used as a subject in an email
-    Default is 'Form Submission'
+    Returns a string to be used as a subject in an email, format:
+
+    message['mail_subject_prefix']: message[message['mail_subject_key']
+        or
+    message['mail_subject_prefix']
+        or
+    message[message['mail_subject_key']]
+        or the default
+    'Form Submission'
     """
-    # If key exists in the message dict and has content return the content
-    if 'mail_subject' in message and message['mail_subject']:
-        return message['mail_subject']
-    # Otherwise return default
-    return 'Form Submission'
+    mail_subject = ''
+    # If mail_subject_prefix exists in the message dict and has content, add
+    # it to the mail_subject string. Then check if mail_subject_key also exists
+    # and points to valid data and append if necessary.
+    if 'mail_subject_prefix' in message and message['mail_subject_prefix']:
+        mail_subject += message['mail_subject_prefix']
+        if ('mail_subject_key' in message and
+                message['mail_subject_key'] and
+                message['mail_subject_key'] in message and
+                message[message['mail_subject_key']]):
+            mail_subject += ": {}".format(message[message['mail_subject_key']])
+
+    # If mail_subject_key is in the message and the field it points to exists,
+    # add it to the mail_subject. It is ok if it is an empty string, because
+    # it will just be ignored
+    elif ('mail_subject_key' in message and
+            message['mail_subject_key'] in message):
+        mail_subject += message[message['mail_subject_key']]
+
+    # Otherwise mail_subject if it has something or the default
+    return mail_subject if mail_subject else 'Form Submission'
 
 
-def send_email(msg, subject, send_to_email='default'):
+def set_mail_from(message):
+    """
+    Returns a string to be used to fill the 'from' field of and email
+    If no from address is provided in the html form, return 'from_default'
+    """
+    # If a from address is included in html form, return it
+    if 'mail_from' in message and message['mail_from']:
+        return message['mail_from']
+    # Otherwise, return from_default
+    return 'from_default'
+
+
+def send_to_address(message):
+    """
+    Returns a string to be used as the address the email is being sent to
+
+    Default is 'support@osuosl.org'
+    """
+    # If a send to address is included in html form, return its assoc. string
+    if 'send_to' in message and message['send_to']:
+        return message['send_to']
+    # Otherwise, return default
+    return 'default'
+
+
+def send_email(msg, subject, send_to_email='default',
+               mail_from='from_default'):
     """Sets up and sends the email"""
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
     msg_send['To'] = conf.EMAIL[send_to_email]
+
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
     try:
-        smtp.sendmail(conf.FROM,
-                      conf.EMAIL[send_to_email],
-                      msg_send.as_string())
-        smtp.quit()
+        if (mail_from != 'from_default'):
+            smtp.sendmail(mail_from,
+                          conf.EMAIL[send_to_email],
+                          msg_send.as_string())
+            smtp.quit()
+        else:
+            smtp.sendmail(conf.FROM[mail_from],
+                          conf.EMAIL[send_to_email],
+                          msg_send.as_string())
+            smtp.quit()
     except RuntimeError:
         smtp.quit()
 
