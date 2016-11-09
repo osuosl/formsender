@@ -412,7 +412,10 @@ def set_mail_from(message):
     # If a from address is included in html form, return it
     if 'mail_from' in message and message['mail_from']:
         return message['mail_from']
-    # Otherwise, return from_default
+    # If there is no explicit mail_from, return the  user's submitted email
+    if 'email' in message and message['email']:
+        return message['email']
+    # If neither mail_from nor email is available, return from_default
     return 'from_default'
 
 
