@@ -97,8 +97,7 @@ class Forms(object):
             self.error = 'Invalid Name'
             error_number = 2
             invalid_option = 'name'
-        elif (not is_hidden_field_empty(request) or
-              not is_valid_token(request)):
+        elif not (is_hidden_field_empty(request) and is_valid_token(request)):
             self.error = 'Improper Form Submission'
             error_number = 3
             invalid_option = 'name'
@@ -412,7 +411,10 @@ def set_mail_from(message):
     # If a from address is included in html form, return it
     if 'mail_from' in message and message['mail_from']:
         return message['mail_from']
-    # Otherwise, return from_default
+    # If there is no explicit mail_from, return the  user's submitted email
+    if 'email' in message and message['email']:
+        return message['email']
+    # If neither mail_from nor email is available, return from_default
     return 'from_default'
 
 
