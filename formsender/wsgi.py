@@ -1,4 +1,5 @@
 from request_handler import create_app
+import conf
 
 if conf.RAVEN_URI:
     from raven import Client
