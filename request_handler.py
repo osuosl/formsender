@@ -300,8 +300,8 @@ def is_valid_email(request):
     return the email if it is valid, False if not
     """
     valid_email = validate_email(request.form['email'],
-                                 check_mx=True,
-                                 verify=True)
+                                 check_mx=False,
+                                 verify=False)
     if valid_email:
         return valid_email
     return False
