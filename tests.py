@@ -230,19 +230,6 @@ class TestFormsender(unittest.TestCase):
 
         self.assertTrue(handler.is_valid_email(req))
 
-    def test_is_valid_email_with_invalid(self):
-        """
-        Tests is_valid_email with an invalid email
-
-        is_valid_email checks that the email submitted to the form is
-        valid and exists. This function call should return false.
-        """
-        builder = EnvironBuilder(method='POST',
-                                 data={'email': 'nope@example.com'})
-        env = builder.get_environ()
-        req = Request(env)
-        self.assertFalse(handler.is_valid_email(req))
-
     def test_validate_name_with_valid(self):
         """
         Tests validate_name with a valid name
