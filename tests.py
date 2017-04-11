@@ -1000,6 +1000,41 @@ class TestFormsender(unittest.TestCase):
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
+    def test_server_status_view_responds_OK_on_GET(self):
+        """
+        Tests that the view for health check by monitoring software works.
 
+        Will return HTTP 200 when sent a GET request
+
+        """
+        builder = EnvironBuilder(method='GET')
+
+        app = handler.create_app()
+        for i in range(conf.CEILING - 1):
+            env = builder.get_environ()
+            req = Request(env)
+            resp = app.on_server_status(req)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEquals(app.error, None)
+
+    def test_server_status_view_does_not_respond_on_anything_other_than_GET(self):
+        """
+        Tests that the view for health check by monitoring software works.
+
+        Will return HTTP 400 when sent anything other than a GET request
+
+        """
+        for m in ['POST','OPTIONS','PATCH','HEAD','PUT','DELETE','TRACE']:
+            builder = EnvironBuilder(method=m)
+
+            app = handler.create_app()
+            for i in range(conf.CEILING - 1):
+                env = builder.get_environ()
+                req = Request(env)
+                resp = app.on_server_status(req)
+
+            self.assertEqual(resp.status_code, 400)
+            self.assertEquals(app.error, None)
 if __name__ == '__main__':
     unittest.main()
