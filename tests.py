@@ -1018,14 +1018,22 @@ class TestFormsender(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEquals(app.error, None)
 
-    def test_server_status_view_does_not_respond_on_anything_other_than_GET(self):
+    def test_server_status_view_responds_with_HTTP_400_on_non_GET_request(self):
         """
         Tests that the view for health check by monitoring software works.
 
         Will return HTTP 400 when sent anything other than a GET request
 
         """
-        for m in ['POST','OPTIONS','PATCH','HEAD','PUT','DELETE','TRACE']:
+        for m in [
+                'POST',
+                'OPTIONS',
+                'PATCH',
+                'HEAD',
+                'PUT',
+                'DELETE',
+                'TRACE'
+                ]:
             builder = EnvironBuilder(method=m)
 
             app = handler.create_app()
