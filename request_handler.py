@@ -48,7 +48,7 @@ class Forms(object):
         try:
             endpoint, values = adapter.match()
             return getattr(self, 'on_' + endpoint)(request, **values)
-        except HTTPException, error:
+        except HTTPException as error:
             self.logger.error('formsender: %s', error)
             return error
 
@@ -300,8 +300,8 @@ def is_valid_email(request):
     return the email if it is valid, False if not
     """
     valid_email = validate_email(request.form['email'],
-                                 check_mx=False,
-                                 verify=False)
+                                 check_mx=False,  # DNS resolution is not reliable
+                                 verify=False)  # disabling RCPT is occasionally used to fight spam
     if valid_email:
         return valid_email
     return False
