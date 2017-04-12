@@ -1010,10 +1010,9 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='GET')
 
         app = handler.create_app()
-        for i in range(conf.CEILING - 1):
-            env = builder.get_environ()
-            req = Request(env)
-            resp = app.on_server_status(req)
+        env = builder.get_environ()
+        req = Request(env)
+        resp = app.on_server_status(req)
 
         self.assertEqual(resp.status_code, 200)
         self.assertEquals(app.error, None)
@@ -1037,10 +1036,9 @@ class TestFormsender(unittest.TestCase):
             builder = EnvironBuilder(method=m)
 
             app = handler.create_app()
-            for i in range(conf.CEILING - 1):
-                env = builder.get_environ()
-                req = Request(env)
-                resp = app.on_server_status(req)
+            env = builder.get_environ()
+            req = Request(env)
+            resp = app.on_server_status(req)
 
             self.assertEqual(resp.status_code, 400)
             self.assertEquals(app.error, None)
