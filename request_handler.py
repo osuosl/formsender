@@ -39,7 +39,10 @@ class Forms(object):
                                      autoescape=True)
         # When the browser is pointed at the root of the website, call
         # on_form_page
-        self.url_map = Map([Rule('/', endpoint='form_page')])
+        self.url_map = Map([
+            Rule('/', endpoint='form_page'),
+            Rule('/server-status', endpoint='server_status'),
+            ])
         self.logger = logger
 
     def dispatch_request(self, request):
@@ -62,6 +65,17 @@ class Forms(object):
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
+
+    def on_server_status(self, request):
+        """
+        Returns an OK on a GET. This is to support health checks by any
+        monitoring software on this application
+        """
+        if request.method == 'GET':
+            return Response('OK', status=200)
+
+        # Do not process anything else
+        return Response('', status=400)
 
     def on_form_page(self, request):
         """
