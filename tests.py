@@ -77,13 +77,13 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
 
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
-
-        # Call send_email and assert sendmail was called correctly
-        handler.create_app()
-        handler.send_email(msg, msg_subj)
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
+        # Mock smtp so it doesn't send an actual email
+        with patch("smtplib.SMTP") as mock_smtp:
+            instance = mock_smtp.return_value
+            # Call send_email and assert sendmail was called correctly
+            handler.create_app()
+            handler.send_email(msg, msg_subj)
+            instance.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
@@ -108,7 +108,7 @@ class TestFormsender(unittest.TestCase):
 
         app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
         self.assertEquals(app.error, None)
 
@@ -133,7 +133,7 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Name')
 
@@ -158,7 +158,7 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = False
         app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Email')
 
@@ -184,7 +184,7 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -209,7 +209,7 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -229,19 +229,6 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
 
         self.assertTrue(handler.is_valid_email(req))
-
-    def test_is_valid_email_with_invalid(self):
-        """
-        Tests is_valid_email with an invalid email
-
-        is_valid_email checks that the email submitted to the form is
-        valid and exists. This function call should return false.
-        """
-        builder = EnvironBuilder(method='POST',
-                                 data={'email': 'nope@example.com'})
-        env = builder.get_environ()
-        req = Request(env)
-        self.assertFalse(handler.is_valid_email(req))
 
     def test_validate_name_with_valid(self):
         """
@@ -333,7 +320,7 @@ class TestFormsender(unittest.TestCase):
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app = handler.create_app()
         for i in range(conf.CEILING - 1):
             env = builder.get_environ()
@@ -362,7 +349,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         app = handler.create_app()
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         for i in range(conf.CEILING + 1):
             app.on_form_page(req)
             # Avoid duplicate form error
@@ -393,7 +380,7 @@ class TestFormsender(unittest.TestCase):
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with('http://www.example.com',
@@ -425,7 +412,7 @@ class TestFormsender(unittest.TestCase):
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -455,7 +442,7 @@ class TestFormsender(unittest.TestCase):
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -485,7 +472,7 @@ class TestFormsender(unittest.TestCase):
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -513,7 +500,7 @@ class TestFormsender(unittest.TestCase):
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
         # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        smtplib.SMTP = Mock('smtplib.SMTP')
         for i in range(conf.CEILING + 1):
             app.on_form_page(req)
             # Avoid duplicate form error
@@ -921,12 +908,12 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['root']
 
-        # Mock sendmail function
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
-
-        # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, send_to_email='root')
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
+        # Mock SMTP
+        with patch("smtplib.SMTP") as mock_smtp:
+            instance = mock_smtp.return_value
+            # Call send_email and assert sendmail was correctly called
+            handler.send_email(msg, msg_subj, send_to_email='root')
+            instance.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['root'],
                                                  msg_send.as_string())
 
@@ -956,12 +943,12 @@ class TestFormsender(unittest.TestCase):
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['support']
 
-        # Mock sendmail function
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
-
-        # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj, send_to_email='support')
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
+        # Mock SMTP
+        with patch("smtplib.SMTP") as mock_smtp:
+            # Call send_email and assert sendmail was correctly called
+            instance = mock_smtp.return_value
+            handler.send_email(msg, msg_subj, send_to_email='support')
+            instance.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['support'],
                                                  msg_send.as_string())
 
@@ -992,11 +979,12 @@ class TestFormsender(unittest.TestCase):
         msg_send['To'] = conf.EMAIL['default']
 
         # Mock sendmail function
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
 
-        # Call send_email and assert sendmail was correctly called
-        handler.send_email(msg, msg_subj)
-        smtplib.SMTP.sendmail.assert_called_with(conf.FROM['from_default'],
+        with patch("smtplib.SMTP") as mock_smtp:
+            instance = mock_smtp.return_value
+            # Call send_email and assert sendmail was correctly called
+            handler.send_email(msg, msg_subj)
+            instance.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
 
