@@ -463,6 +463,7 @@ def send_email(msg, subject, send_to_email='default',
     msg_send['Subject'] = subject
     msg_send['To'] = conf.EMAIL[send_to_email]
 
+    # print(msg_send)
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
