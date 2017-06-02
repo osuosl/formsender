@@ -1030,5 +1030,35 @@ class TestFormsender(unittest.TestCase):
 
             self.assertEqual(resp.status_code, 400)
             self.assertEquals(app.error, None)
+
+    def test_string_comp_from_fields_to_join(self):
+        """
+        Tests that values can be pulled from form fields and composed into a
+        string to be included in the body of the email.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'some_field': "This is some info.",
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'token': conf.TOKEN,
+                                       'fields_to_join': 'name,email,some_field'})
+        env = builder.get_environ()
+        req = Request(env)
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Some Field:\n\n"
+                          "This is some info.\n\n"
+                          "Valid Guy:example@osuosl.org:This is some info.\n\n")
+        message = handler.create_msg(req)
+        formatted_message = handler.format_message(message)
+        self.assertEqual(formatted_message, target_message)
+
+
 if __name__ == '__main__':
     unittest.main()
