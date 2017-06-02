@@ -362,7 +362,8 @@ def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
-                     'name', 'email', 'mail_subject', 'send_to']
+                     'name', 'email', 'mail_subject', 'send_to',
+                     'fields_to_join']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
@@ -374,6 +375,15 @@ def format_message(msg):
         if key not in hidden_fields:
             f_message += ('{0}:\n\n{1}\n\n'.format(convert_key_to_title(key),
                                                    msg[key]))
+    if 'fields_to_join' in msg:
+        # handle fields_to_join
+        for i, field in enumerate(msg['fields_to_join'].split(',')):
+            f_message += msg[field]
+            if i + 1 != len(msg['fields_to_join'].split(',')):
+                f_message += ':'
+            else:
+                f_message += '\n\n'
+
     return f_message
 
 
