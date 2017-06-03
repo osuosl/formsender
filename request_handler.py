@@ -111,7 +111,9 @@ class Forms(object):
             self.error = 'Invalid Name'
             error_number = 2
             invalid_option = 'name'
-        elif not (is_hidden_field_empty(request) and is_valid_token(request)):
+        elif (not (is_hidden_field_empty(request) and
+                   is_valid_token(request)) or
+                not (is_valid_fields_to_join(request))):
             self.error = 'Improper Form Submission'
             error_number = 3
             invalid_option = 'name'
@@ -344,6 +346,18 @@ def is_valid_token(request):
     if request.form['token'] == conf.TOKEN:
         return True
     return False
+
+
+def is_valid_fields_to_join(request):
+    """
+    Make sure that if request has 'fields_to_join' field, that the specified
+    fields to join exist
+    """
+    if 'fields_to_join' in request.form:
+        for field in request.form['fields_to_join'].split(','):
+            if field not in request.form:
+                return False
+    return True
 
 
 def create_error_url(error_number, message, request):

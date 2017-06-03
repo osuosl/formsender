@@ -214,6 +214,32 @@ class TestFormsender(unittest.TestCase):
         self.assertEqual(app.error, 'Improper Form Submission')
 
     @patch('request_handler.validate_email')
+    def test_validations_invalid_fields_to_join(self, mock_validate_email):
+        """
+        Tests the form validation with an invalid 'fields_to_join' field.
+
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        An invalid token causes the 'Improper Form Submission' error.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '',
+                                       'token': conf.TOKEN,
+                                       'redirect': 'http://www.example.com',
+                                       'fields_to_join': 'name,missing,email'})
+        env = builder.get_environ()
+        req = Request(env)
+        # Mock external validate_email so returns true in Travis
+        mock_validate_email.return_value = True
+        app = handler.create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP = Mock('smtplib.SMTP')
+        app.on_form_page(req)
+        self.assertEqual(app.error, 'Improper Form Submission')
+
+    @patch('request_handler.validate_email')
     def test_is_valid_email_with_valid(self, mock_validate_email):
         """
         Tests is_valid_email with a valid email
