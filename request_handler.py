@@ -377,12 +377,8 @@ def format_message(msg):
                                                    msg[key]))
     if 'fields_to_join' in msg:
         # handle fields_to_join
-        for i, field in enumerate(msg['fields_to_join'].split(',')):
-            f_message += msg[field]
-            if i + 1 != len(msg['fields_to_join'].split(',')):
-                f_message += ':'
-            else:
-                f_message += '\n\n'
+        fields_to_join = msg['fields_to_join'].split(',')  # list of fields
+        f_message += ':'.join(msg[field] for field in fields_to_join) + '\n\n'
 
     return f_message
 
