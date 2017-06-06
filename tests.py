@@ -76,6 +76,7 @@ class TestFormsender(unittest.TestCase):
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
+        msg_send['Sender'] = conf.SENDER
 
         # Mock smtp so it doesn't send an actual email
         with patch("smtplib.SMTP") as mock_smtp:
@@ -907,6 +908,7 @@ class TestFormsender(unittest.TestCase):
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['root']
+        msg_send['Sender'] = conf.SENDER
 
         # Mock SMTP
         with patch("smtplib.SMTP") as mock_smtp:
@@ -942,6 +944,7 @@ class TestFormsender(unittest.TestCase):
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['support']
+        msg_send['Sender'] = conf.SENDER
 
         # Mock SMTP
         with patch("smtplib.SMTP") as mock_smtp:
@@ -977,6 +980,7 @@ class TestFormsender(unittest.TestCase):
         msg_subj = handler.set_mail_subject(msg)
         msg_send['Subject'] = msg_subj
         msg_send['To'] = conf.EMAIL['default']
+        msg_send['Sender'] = conf.SENDER
 
         # Mock sendmail function
 
