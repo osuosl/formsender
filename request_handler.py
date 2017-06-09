@@ -452,6 +452,7 @@ def send_email(msg, subject, send_to_email='default',
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
     msg_send['To'] = conf.EMAIL[send_to_email]
+    msg_send['Sender'] = conf.SENDER
 
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
