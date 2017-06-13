@@ -22,6 +22,7 @@ from datetime import datetime
 import logging
 import logging.handlers
 import conf
+import time
 
 
 class Forms(object):
@@ -355,7 +356,7 @@ def is_valid_fields_to_join(request):
     """
     if 'fields_to_join' in request.form:
         for field in request.form['fields_to_join'].split(','):
-            if field not in request.form:
+            if field not in request.form and field != 'date':
                 return False
     return True
 
@@ -392,8 +393,8 @@ def format_message(msg):
     if 'fields_to_join' in msg:
         # handle fields_to_join
         fields_to_join = msg['fields_to_join'].split(',')  # list of fields
-        f_message += ':'.join(msg[field] for field in fields_to_join) + '\n\n'
-
+        f_message += (
+            ':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join) + '\n\n')
     return f_message
 
 

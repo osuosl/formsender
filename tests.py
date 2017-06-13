@@ -6,6 +6,7 @@ from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
 from email.mime.text import MIMEText
 import conf
+import time
 import request_handler as handler
 
 
@@ -1069,7 +1070,7 @@ class TestFormsender(unittest.TestCase):
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
                                        'token': conf.TOKEN,
-                                       'fields_to_join': 'name,email,some_field'})
+                                       'fields_to_join': 'name,email,date,some_field'})
         env = builder.get_environ()
         req = Request(env)
         target_message = ("Contact:\n"
@@ -1080,7 +1081,7 @@ class TestFormsender(unittest.TestCase):
                           "------------\n"
                           "Some Field:\n\n"
                           "This is some info.\n\n"
-                          "Valid Guy:example@osuosl.org:This is some info.\n\n")
+                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n" % str(int(time.time())))
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
