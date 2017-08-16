@@ -6,6 +6,7 @@ from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
 from email.mime.text import MIMEText
 import conf
+import time
 import request_handler as handler
 
 
@@ -204,6 +205,32 @@ class TestFormsender(unittest.TestCase):
                                        'last_name': '',
                                        'token': 'evilrobot',
                                        'redirect': 'http://www.example.com'})
+        env = builder.get_environ()
+        req = Request(env)
+        # Mock external validate_email so returns true in Travis
+        mock_validate_email.return_value = True
+        app = handler.create_app()
+        # Mock sendmail function so it doesn't send an actual email
+        smtplib.SMTP = Mock('smtplib.SMTP')
+        app.on_form_page(req)
+        self.assertEqual(app.error, 'Improper Form Submission')
+
+    @patch('request_handler.validate_email')
+    def test_validations_invalid_fields_to_join(self, mock_validate_email):
+        """
+        Tests the form validation with an invalid 'fields_to_join' field.
+
+        on_form_page checks for valid fields in submitted form and
+        returns an error message if an invalid field is found.
+        An invalid token causes the 'Improper Form Submission' error.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '',
+                                       'token': conf.TOKEN,
+                                       'redirect': 'http://www.example.com',
+                                       'fields_to_join': 'name,missing,email'})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns true in Travis
@@ -1034,5 +1061,35 @@ class TestFormsender(unittest.TestCase):
 
             self.assertEqual(resp.status_code, 400)
             self.assertEquals(app.error, None)
+
+    def test_string_comp_from_fields_to_join(self):
+        """
+        Tests that values can be pulled from form fields and composed into a
+        string to be included in the body of the email.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'some_field': "This is some info.",
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'token': conf.TOKEN,
+                                       'fields_to_join': 'name,email,date,some_field'})
+        env = builder.get_environ()
+        req = Request(env)
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Some Field:\n\n"
+                          "This is some info.\n\n"
+                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n" % str(int(time.time())))
+        message = handler.create_msg(req)
+        formatted_message = handler.format_message(message)
+        self.assertEqual(formatted_message, target_message)
+
+
 if __name__ == '__main__':
     unittest.main()
