@@ -22,6 +22,7 @@ from datetime import datetime
 import logging
 import logging.handlers
 import conf
+import time
 
 
 class Forms(object):
@@ -111,7 +112,9 @@ class Forms(object):
             self.error = 'Invalid Name'
             error_number = 2
             invalid_option = 'name'
-        elif not (is_hidden_field_empty(request) and is_valid_token(request)):
+        elif (not (is_hidden_field_empty(request) and
+                   is_valid_token(request)) or
+                not (is_valid_fields_to_join(request))):
             self.error = 'Improper Form Submission'
             error_number = 3
             invalid_option = 'name'
@@ -346,6 +349,18 @@ def is_valid_token(request):
     return False
 
 
+def is_valid_fields_to_join(request):
+    """
+    Make sure that if request has 'fields_to_join' field, that the specified
+    fields to join exist
+    """
+    if 'fields_to_join' in request.form:
+        for field in request.form['fields_to_join'].split(','):
+            if field not in request.form and field != 'date':
+                return False
+    return True
+
+
 def create_error_url(error_number, message, request):
     """Construct error message and append to redirect url"""
     values = [('error', str(error_number)), ('message', message)]
@@ -362,7 +377,8 @@ def format_message(msg):
     """Formats a dict (msg) into a nice-looking string"""
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
-                     'name', 'email', 'mail_subject', 'send_to']
+                     'name', 'email', 'mail_subject', 'send_to',
+                     'fields_to_join']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
@@ -374,6 +390,11 @@ def format_message(msg):
         if key not in hidden_fields:
             f_message += ('{0}:\n\n{1}\n\n'.format(convert_key_to_title(key),
                                                    msg[key]))
+    if 'fields_to_join' in msg:
+        # handle fields_to_join
+        fields_to_join = msg['fields_to_join'].split(',')  # list of fields
+        f_message += (
+            ':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join) + '\n\n')
     return f_message
 
 
@@ -454,6 +475,7 @@ def send_email(msg, subject, send_to_email='default',
     msg_send['To'] = conf.EMAIL[send_to_email]
     msg_send['Sender'] = conf.SENDER
 
+    # print(msg_send)
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
