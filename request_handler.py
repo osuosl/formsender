@@ -392,9 +392,11 @@ def format_message(msg):
     if 'fields_to_join' in msg:
         # handle fields_to_join
         fields_to_join = msg['fields_to_join'].split(',')  # list of fields
-        joined_data = (':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join) + '\n\n')
+        joined_data = (':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join))
 
-        if 'fields_to_join_name' in msg:
+        # If the fields to join name is specified, and the name does not exist
+        # as a key in current msg dictionary
+        if 'fields_to_join_name' in msg and msg['fields_to_join_name'] not in msg:
             msg[msg['fields_to_join_name']] = joined_data
             msg.pop('fields_to_join', None)
         else:
