@@ -380,23 +380,33 @@ def format_message(msg):
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
                      'name', 'email', 'mail_subject', 'send_to',
-                     'fields_to_join']
+                     'fields_to_join_name']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
                  "\nInformation:\n------------\n"
                  .format(msg['name'], msg['email']))
+
+    # If fields_to_join_name specified, add the key, data to the dictionary
+    # Otherwise, create fields_to_join key, data and add to dictionary
+    if 'fields_to_join' in msg:
+        # handle fields_to_join
+        fields_to_join = msg['fields_to_join'].split(',')  # list of fields
+        joined_data = (':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join) + '\n\n')
+
+        if 'fields_to_join_name' in msg:
+            msg[msg['fields_to_join_name']] = joined_data
+            msg.pop('fields_to_join', None)
+        else:
+            msg['fields_to_join'] = joined_data
+
     # Write each formatted key in title case and corresponding message to
     # f_message, each key and message is separated by two lines.
     for key in sorted(msg):
         if key not in hidden_fields:
             f_message += ('{0}:\n{1}\n\n'.format(convert_key_to_title(key),
                                                  msg[key]))
-    if 'fields_to_join' in msg:
-        # handle fields_to_join
-        fields_to_join = msg['fields_to_join'].split(',')  # list of fields
-        f_message += (
-            ':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join) + '\n\n')
+
     return f_message
 
 
@@ -477,7 +487,7 @@ def send_email(msg, subject, send_to_email='default',
     msg_send['To'] = conf.EMAIL[send_to_email]
     msg_send['Sender'] = conf.SENDER
 
-    # print(msg_send)
+    print(msg_send)
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string
