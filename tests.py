@@ -583,7 +583,7 @@ class TestFormsender(unittest.TestCase):
                           "EMAIL:   example@osuosl.org\n\n"
                           "Information:\n"
                           "------------\n"
-                          "Some Field:\n\n"
+                          "Some Field:\n"
                           "This is multi line and should not be on the same "
                           "line as the title\n\n")
         message = handler.create_msg(req)
@@ -1083,7 +1083,7 @@ class TestFormsender(unittest.TestCase):
                           "EMAIL:   example@osuosl.org\n\n"
                           "Information:\n"
                           "------------\n"
-                          "Some Field:\n\n"
+                          "Some Field:\n"
                           "This is some info.\n\n"
                           "Valid Guy:example@osuosl.org:%s:This is some info.\n\n" % str(int(time.time())))
         message = handler.create_msg(req)
