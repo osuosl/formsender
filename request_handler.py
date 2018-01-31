@@ -390,7 +390,7 @@ def format_message(msg):
     # f_message, each key and message is separated by two lines.
     for key in sorted(msg):
         if key not in hidden_fields:
-            f_message += ('{0}:\n\n{1}\n\n'.format(convert_key_to_title(key),
+            f_message += ('{0}:\n{1}\n\n'.format(convert_key_to_title(key),
                                                    msg[key]))
     if 'fields_to_join' in msg:
         # handle fields_to_join
