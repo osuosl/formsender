@@ -398,9 +398,9 @@ def format_message(msg):
         # as a key in current msg dictionary
         if 'fields_to_join_name' in msg and msg['fields_to_join_name'] not in msg:
             msg[msg['fields_to_join_name']] = joined_data
-            msg.pop('fields_to_join', None)
         else:
-            msg['fields_to_join'] = joined_data
+            msg['Fields To Join'] = joined_data
+        msg.pop('fields_to_join', None)
 
     # Write each formatted key in title case and corresponding message to
     # f_message, each key and message is separated by two lines.

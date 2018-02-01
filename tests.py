@@ -1083,9 +1083,11 @@ class TestFormsender(unittest.TestCase):
                           "EMAIL:   example@osuosl.org\n\n"
                           "Information:\n"
                           "------------\n"
+                          "Fields To Join:\n"
+                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n"
                           "Some Field:\n"
-                          "This is some info.\n\n"
-                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n" % str(int(time.time())))
+                          "This is some info.\n\n" % str(int(time.time())))
+
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
