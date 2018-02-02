@@ -412,8 +412,9 @@ def format_message(msg):
     # f_message, each key and message is separated by two lines.
     for key in sorted(titles):
         if key not in hidden_fields:
-            f_message += ('{0}:\n{1}\n\n'.format(\
-                convert_key_to_title(titles[key]), msg[titles[key]]))
+            f_message += \
+                ('{0}:\n{1}\n\n'.format(convert_key_to_title(titles[key]),
+                                        msg[titles[key]]))
 
     return f_message
 

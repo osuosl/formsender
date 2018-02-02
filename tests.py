@@ -1117,7 +1117,8 @@ class TestFormsender(unittest.TestCase):
                           "Some Field:\n"
                           "This is some info.\n\n"
                           "With New Field Name:\n"
-                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n"% str(int(time.time())))
+                          "Valid Guy:example@osuosl.org:"
+                          "%s:This is some info.\n\n" % str(int(time.time())))
 
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
