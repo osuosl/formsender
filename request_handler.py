@@ -397,17 +397,23 @@ def format_message(msg):
         # If the fields to join name is specified, and the name does not exist
         # as a key in current msg dictionary
         if 'fields_to_join_name' in msg and msg['fields_to_join_name'] not in msg:
-            msg[msg['fields_to_join_name']] = joined_data
+            msg[str(msg['fields_to_join_name'])] = joined_data
         else:
-            msg['Fields To Join'] = joined_data
+            msg[str('Fields To Join')] = joined_data
         msg.pop('fields_to_join', None)
+
+    # Create another dictionary that has lowercase title as key and original
+    # title as value
+    titles = {}
+    for key in msg:
+        titles[key.lower()] = key
 
     # Write each formatted key in title case and corresponding message to
     # f_message, each key and message is separated by two lines.
-    for key in sorted(msg):
+    for key in sorted(titles):
         if key not in hidden_fields:
-            f_message += ('{0}:\n{1}\n\n'.format(convert_key_to_title(key),
-                                                 msg[key]))
+            f_message += ('{0}:\n{1}\n\n'.format(\
+                convert_key_to_title(titles[key]), msg[titles[key]]))
 
     return f_message
 
@@ -489,7 +495,7 @@ def send_email(msg, subject, send_to_email='default',
     msg_send['To'] = conf.EMAIL[send_to_email]
     msg_send['Sender'] = conf.SENDER
 
-    print(msg_send)
+    # print(msg_send)
     # Sets up a temporary mail server to send from
     smtp = smtplib.SMTP(conf.SMTP_HOST)
     # Attempts to send the mail to EMAIL, with the message formatted as a string

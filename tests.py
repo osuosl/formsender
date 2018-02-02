@@ -1092,6 +1092,36 @@ class TestFormsender(unittest.TestCase):
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
 
+    def test_string_comp_with_fields_to_join_name(self):
+        """
+        Tests that value from fields_to_join_name field can be used as keys for
+        fields_to_join data
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'some_field': "This is some info.",
+                                       'redirect': 'http://www.example.com',
+                                       'last_name': '',
+                                       'token': conf.TOKEN,
+                                       'fields_to_join_name': 'With New Field Name',
+                                       'fields_to_join': 'name,email,date,some_field'})
+        env = builder.get_environ()
+        req = Request(env)
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Some Field:\n"
+                          "This is some info.\n\n"
+                          "With New Field Name:\n"
+                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n"% str(int(time.time())))
+
+        message = handler.create_msg(req)
+        formatted_message = handler.format_message(message)
+        self.assertEqual(formatted_message, target_message)
 
 if __name__ == '__main__':
     unittest.main()
