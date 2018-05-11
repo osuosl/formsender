@@ -380,23 +380,43 @@ def format_message(msg):
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
                      'name', 'email', 'mail_subject', 'send_to',
-                     'fields_to_join']
+                     'fields_to_join_name', 'support', 'ibm_power',
+                     'mail_subject_prefix', 'mail_subject_key']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
                  "\nInformation:\n------------\n"
                  .format(msg['name'], msg['email']))
-    # Write each formatted key in title case and corresponding message to
-    # f_message, each key and message is separated by two lines.
-    for key in sorted(msg):
-        if key not in hidden_fields:
-            f_message += ('{0}:\n\n{1}\n\n'.format(convert_key_to_title(key),
-                                                   msg[key]))
+
+    # If fields_to_join_name specified, add the key, data to the dictionary
+    # Otherwise, create fields_to_join key, data and add to dictionary
     if 'fields_to_join' in msg:
         # handle fields_to_join
         fields_to_join = msg['fields_to_join'].split(',')  # list of fields
-        f_message += (
-            ':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join) + '\n\n')
+        joined_data = (':'.join(str(int(time.time())) if field == 'date' else msg[field] for field in fields_to_join))
+
+        # If the fields to join name is specified, and the name does not exist
+        # as a key in current msg dictionary
+        if 'fields_to_join_name' in msg and msg['fields_to_join_name'] not in msg:
+            msg[str(msg['fields_to_join_name'])] = joined_data
+        else:
+            msg[str('Fields To Join')] = joined_data
+        msg.pop('fields_to_join', None)
+
+    # Create another dictionary that has lowercase title as key and original
+    # title as value
+    titles = {}
+    for key in msg:
+        titles[key.lower()] = key
+
+    # Write each formatted key in title case and corresponding message to
+    # f_message, each key and message is separated by two lines.
+    for key in sorted(titles):
+        if key not in hidden_fields:
+            f_message += \
+                ('{0}:\n{1}\n\n'.format(convert_key_to_title(titles[key]),
+                                        msg[titles[key]]))
+
     return f_message
 
 
