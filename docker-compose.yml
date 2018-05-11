@@ -1,6 +1,8 @@
 web:
-
   build: .
+  volumes:
+    - /dev/log:/dev/log
+    - .:/opt/formsender
+  working_dir: /opt/formsender
   ports:
    - "5000:5000"
-  
