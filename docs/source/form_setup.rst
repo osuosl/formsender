@@ -55,32 +55,32 @@ email:
     follows (note that ``mail_subject_key`` sets the subject to the contents of
     the user input in the field with a name matching the value in
     ``mail_subject_key``):
-    
+
         form['mail_subject_prefix']: form[form['mail_subject_key']
         example: Hosting Request: Linux Foundation
-    
+
     If only ``mail_subject_prefix`` is available and valid:
 
         form['mail_subject_prefix']
         example: Hosting Request
-    
+
     If only ``mail_subject_key`` is available and valid:
 
         form[form['mail_subject_key']]
         example: Linux Foundation
-    
+
     If neither field is available or valid, the email subject will be set to
     the default:
 
         'Form Submission'
-    
+
     ``mail_subject_prefix`` and ``mail_subject_key`` should both be hidden
     fields
 
-    example: 
-    
+    example:
+
     .. code-block:: html
-    
+
       <input type="hidden" name="mail_subject_prefix" value="Hosting Request" />
       <input type="hidden" name="mail_subject_key" value="project" />
       <input type="text" name="project" value="" size="60" maxlength="128" />
@@ -108,6 +108,46 @@ email:
     field.
 
     example: ``<input type="hidden" name="mail_from" value="randouser@example.org" />``
+
+* **fields_to_join**
+
+    Sets a field that joins other fields' values with colons. The value of the
+    form must be names of existing fields joined by "," (comma). If the value
+    contains field's name that does not exist, an error is returned.
+
+    If the "fields_to_join_name" field is not specified, the joined value will
+    be under title "Fields To Join". If it is specified, the joined value will
+    be under the title of specified value. For more information, please read the
+    "fields_to_join_name" section.
+
+    example: ``<input type="hidden" name="fields_to_join" value="email,project,name" />``
+
+    result section of email:
+
+    .. code-block:: html
+
+      Fields To Join:
+      example@email.com:hosting:John Doe
+
+* **fields_to_join_name**
+
+    Sets the title name of "fields_to_join" field in the email. If not specified,
+    the joined value from "fields_to_join" field will be under title "Field To Join".
+    If it is specified, the joined value will be under the title of specified value.
+
+    example:
+
+    .. code-block:: html
+
+      <input type="hidden" name="fields_to_join" value="email,project,name" />
+      <input type="hidden" name="fields_to_join_name" value="Description" />
+
+    result section of email:
+
+    .. code-block:: html
+
+      Description:
+      example@email.com:hosting:John Doe
 
 All Other Fields
 ----------------
