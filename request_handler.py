@@ -340,7 +340,7 @@ def is_valid_recaptcha(request):
 
     recaptchaURL = 'https://www.google.com/recaptcha/api/siteverify'
     recaptcha_response = request.form['g-recaptcha-response']
-    secret_key = '...'
+    secret_key = conf.RECAPTCHA_SECRET
     URLParams = urlencode({
         'secret':    secret_key,
         'response':  recaptcha_response,
