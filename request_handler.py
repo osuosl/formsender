@@ -409,7 +409,8 @@ def format_message(msg):
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
                      'name', 'email', 'mail_subject', 'send_to',
                      'fields_to_join_name', 'support', 'ibm_power',
-                     'mail_subject_prefix', 'mail_subject_key']
+                     'mail_subject_prefix', 'mail_subject_key',
+                     'g-recaptcha-response']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {0}\nEMAIL:   {1}\n"
