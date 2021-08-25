@@ -11,6 +11,8 @@ import smtplib
 import werkzeug
 import urllib
 import hashlib
+from urllib import urlencode
+from urllib2 import urlopen
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -23,6 +25,7 @@ import logging
 import logging.handlers
 import conf
 import time
+import json
 
 
 class Forms(object):
@@ -125,6 +128,10 @@ class Forms(object):
         elif self.controller.is_duplicate(create_msg(request)):
             self.error = 'Duplicate Request'
             error_number = 5
+            invalid_option = 'name'
+        elif not is_valid_recaptcha(request):
+            self.error = 'Invalid Recaptcha'
+            error_number = 6
             invalid_option = 'name'
         else:
             # If nothing above is true, there is no error
@@ -324,6 +331,27 @@ def is_valid_email(request):
     if valid_email:
         return valid_email
     return False
+
+def is_valid_recaptcha(request):
+    """
+    Check that recaptcha responce is valid
+    by sending a POST request to google's servers
+    """
+
+    recaptchaURL = 'https://www.google.com/recaptcha/api/siteverify'
+    recaptcha_response = request.form['g-recaptcha-response']
+    secret_key = conf.RECAPTCHA_SECRET
+    URLParams = urlencode({
+        'secret':    secret_key,
+        'response':  recaptcha_response,
+        'remote_ip': request.remote_addr,
+    })
+
+    google_response   = urlopen(recaptchaURL, URLParams.encode('utf-8')).read()
+    recaptcha_result  = json.loads(google_response)
+    recaptcha_success = recaptcha_result.get('success', None)
+
+    return recaptcha_success
 
 
 def validate_name(request):
