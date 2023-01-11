@@ -38,7 +38,7 @@ class TestFormsender(unittest.TestCase):
         builder = EnvironBuilder(method='POST', data={})
         env = builder.get_environ()
         req = Request(env)
-        self.assertEquals(handler.create_msg(req), None)
+        self.assertEqual(handler.create_msg(req), None)
 
     def test_create_msg_with_content_get_method(self):
         """
