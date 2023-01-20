@@ -139,7 +139,7 @@ class Forms:
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
-        self.logger.warn('formsender: received %s: %s from %s',
+        self.logger.warning('formsender: received %s: %s from %s',
                          self.error,
                          request.form[invalid_option],
                          request.form['email'])
@@ -166,10 +166,8 @@ class Forms:
             # Should log full request
             self.logger.debug('formsender message: %s', message)
 
-            send_ticket(message, format_message(message),
-                        set_mail_subject(message))
-            #send_email(format_message(message), set_mail_subject(message),
-            #           send_to_address(message), set_mail_from(message))
+            send_ticket(format_message(message), set_mail_subject(message),
+                        send_to_address(message), set_mail_from(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -314,9 +312,6 @@ def create_msg(request):
         # dict. request.form cannot be returned directly because it is a
         # multidict.
         for key in request.form:
-            #safe_key = key.encode('utf-8')
-            #safe_value = request.form[key].encode('utf-8')
-            #message[safe_key] = safe_value
             message[key] = request.form[key]
         # If there is a message, return it, otherwise return None
         if message:
@@ -521,18 +516,15 @@ def send_to_address(message):
     # Otherwise, return default
     return 'default'
 
-def send_ticket(message, f_message, subject):
+def send_ticket(msg, subject, send_to_queue, mail_from):
     """Creates ticket and sends to RT"""
-    # Creates connection to REST (CHANGE: change these to variables in conf?)
-    tracker = rt.rest2.Rt('http://support.osuosl.org/REST/2.0/', http_auth=requests.auth.HTTPBasicAuth('root', 'password'))
-    # Set requestor
-    mail_from = message['email']
-    new_ticket = {'Requestor': [mail_from],}
+    # Creates connection to REST
+    tracker = rt.rest2.Rt(conf.URL, http_auth=requests.auth.HTTPBasicAuth(conf.RT_USER, conf.RT_PASSWORD))
     # Create ticket and send to RT
-    tracker.create_ticket('OSLSupport',
+    tracker.create_ticket(queue=send_to_queue,
                           subject=subject,
-                          content=f_message,
-                          **new_ticket
+                          requestor=mail_from,
+                          content=msg
                          )
 
 def send_email(msg, subject, send_to_email='default',
@@ -541,7 +533,6 @@ def send_email(msg, subject, send_to_email='default',
     # Format the message and set the subject
     msg_send = MIMEText(str(msg))
     msg_send['Subject'] = subject
-    #msg_send['To'] = conf.EMAIL['send_to_email']
     msg_send['To'] = conf.EMAIL
     msg_send['Sender'] = conf.SENDER
 
