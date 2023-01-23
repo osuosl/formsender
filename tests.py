@@ -52,7 +52,7 @@ class TestFormsender(unittest.TestCase):
                                        'test': 'test.txt'})
         env = builder.get_environ()
         req = Request(env)
-        self.assertEquals(handler.create_msg(req), None)
+        self.assertEqual(handler.create_msg(req), None)
 
     def test_send_email(self):
         """
@@ -84,7 +84,7 @@ class TestFormsender(unittest.TestCase):
             instance = mock_smtp.return_value
             # Call send_email and assert sendmail was called correctly
             handler.create_app()
-            handler.send_email(msg, msg_subj)
+            handler.send_ticket(msg, msg_subj)
             instance.sendmail.assert_called_with(conf.FROM['from_default'],
                                                  conf.EMAIL['default'],
                                                  msg_send.as_string())
@@ -1034,7 +1034,7 @@ class TestFormsender(unittest.TestCase):
         resp = app.on_server_status(req)
 
         self.assertEqual(resp.status_code, 200)
-        self.assertEquals(app.error, None)
+        self.assertEqual(app.error, None)
 
     def test_server_status_view_responds_with_HTTP_400_on_non_GET_request(self):
         """

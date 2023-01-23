@@ -516,42 +516,17 @@ def send_to_address(message):
     # Otherwise, return default
     return 'default'
 
-def send_ticket(msg, subject, send_to_queue, mail_from):
+
+def send_ticket(msg, subject, send_to_queue='General', mail_from='from_default'):
     """Creates ticket and sends to RT"""
     # Creates connection to REST
-    tracker = rt.rest2.Rt(conf.URL, http_auth=requests.auth.HTTPBasicAuth(conf.RT_USER, conf.RT_PASSWORD))
+    tracker = rt.rest2.Rt(conf.URL, http_auth=requests.auth.HTTPBasicAuth('root', 'password'))
     # Create ticket and send to RT
     tracker.create_ticket(queue=send_to_queue,
                           subject=subject,
                           requestor=mail_from,
                           content=msg
                          )
-
-def send_email(msg, subject, send_to_email='default',
-               mail_from='from_default'):
-    """Sets up and sends the email"""
-    # Format the message and set the subject
-    msg_send = MIMEText(str(msg))
-    msg_send['Subject'] = subject
-    msg_send['To'] = conf.EMAIL
-    msg_send['Sender'] = conf.SENDER
-
-    # Sets up a temporary mail server to send from
-    smtp = smtplib.SMTP(conf.SMTP_HOST)
-    # Attempts to send the mail to EMAIL, with the message formatted as a string
-    try:
-        if (mail_from != 'from_default'):
-            smtp.sendmail(mail_from,
-                          conf.EMAIL[send_to_email],
-                          msg_send.as_string())
-            smtp.quit()
-        else:
-            smtp.sendmail(conf.FROM[mail_from],
-                          conf.EMAIL[send_to_email],
-                          msg_send.as_string())
-            smtp.quit()
-    except RuntimeError:
-        smtp.quit()
 
 
 # Start application
