@@ -1,4 +1,3 @@
-import smtplib
 import unittest
 import werkzeug
 from werkzeug.wrappers import Request
@@ -8,6 +7,8 @@ from email.mime.text import MIMEText
 import conf
 import time
 import request_handler as handler
+import requests.auth
+import rt
 
 
 class TestFormsender(unittest.TestCase):
@@ -75,19 +76,17 @@ class TestFormsender(unittest.TestCase):
         msg = handler.create_msg(req)
         msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
-        msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['default']
-        msg_send['Sender'] = conf.SENDER
 
-        # Mock smtp so it doesn't send an actual email
-        with patch("smtplib.SMTP") as mock_smtp:
-            instance = mock_smtp.return_value
-            # Call send_email and assert sendmail was called correctly
+        # Mock create_ticket function
+        with patch('rt.rest2.Rt') as mock_rt:
+            instance = mock_rt.return_value
+            # Call send_ticket and assert ticket creation returns new ticket ID
             handler.create_app()
             handler.send_ticket(msg, msg_subj)
-            #instance.sendmail.assert_called_with(conf.FROM['from_default'],
-            #                                     conf.EMAIL['default'],
-            #                                     msg_send.as_string())
+            instance.create_ticket.assert_called_with(queue='General',
+                                                      subject=msg_subj,
+                                                      requestor='from_default',
+                                                      content=msg)
 
     @patch('request_handler.validate_email')
     def test_validations_valid_data(self, mock_validate_email):
@@ -102,15 +101,15 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'token': conf.TOKEN,
-                                       'redirect': 'http://www.example.com'})
+                                       'redirect': 'http://www.example.com',
+                                       'g-recaptcha-response': ''})
         env = builder.get_environ()
         req = Request(env)
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
-
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
         self.assertEqual(app.error, None)
 
@@ -134,8 +133,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Name')
 
@@ -159,8 +158,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns false in Travis
         mock_validate_email.return_value = False
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Invalid Email')
 
@@ -185,8 +184,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -210,8 +209,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -236,8 +235,8 @@ class TestFormsender(unittest.TestCase):
         # Mock external validate_email so returns true in Travis
         mock_validate_email.return_value = True
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
         self.assertEqual(app.error, 'Improper Form Submission')
 
@@ -344,11 +343,12 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'token': conf.TOKEN,
-                                       'redirect': 'http://www.example.com'})
+                                       'redirect': 'http://www.example.com',
+                                       'g-recaptcha-response': ''})
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app = handler.create_app()
         for i in range(conf.CEILING - 1):
             env = builder.get_environ()
@@ -370,14 +370,15 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'token': conf.TOKEN,
-                                       'redirect': 'http://www.example.com'})
+                                       'redirect': 'http://www.example.com',
+                                       'g-recaptcha-response': ''})
         # Mock validate email so returns true in Travis
         mock_validate_email.return_value = True
         env = builder.get_environ()
         req = Request(env)
         app = handler.create_app()
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         for i in range(conf.CEILING + 1):
             app.on_form_page(req)
             # Avoid duplicate form error
@@ -397,7 +398,8 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'token': conf.TOKEN})
+                                       'token': conf.TOKEN,
+                                       'g-recaptcha-response': ''})
         env = builder.get_environ()
         req = Request(env)
 
@@ -407,8 +409,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with('http://www.example.com',
@@ -439,8 +441,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -469,8 +471,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -499,8 +501,8 @@ class TestFormsender(unittest.TestCase):
         # Create app and mock redirect
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         app.on_form_page(req)
 
         werkzeug.utils.redirect.assert_called_with(
@@ -519,7 +521,8 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'redirect': 'http://www.example.com',
                                        'last_name': '',
-                                       'token': conf.TOKEN})
+                                       'token': conf.TOKEN,
+                                       'g-recaptcha-response': ''})
         env = builder.get_environ()
         req = Request(env)
 
@@ -527,8 +530,8 @@ class TestFormsender(unittest.TestCase):
         mock_validate_email.return_value = True
         app = handler.create_app()
         werkzeug.utils.redirect = Mock('werkzeug.utils.redirect')
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP = Mock('smtplib.SMTP')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt = Mock('rt.rest2.Rt')
         for i in range(conf.CEILING + 1):
             app.on_form_page(req)
             # Avoid duplicate form error
@@ -822,7 +825,7 @@ class TestFormsender(unittest.TestCase):
     def test_send_to_address_with_nothing(self):
         """
         send_to_adress(message) returns the string in message['send_to']
-        when it is present, otherwise it returns 'default'
+        when it is present, otherwise it returns 'OSLSupport'
         """
 
         # Build test environment
@@ -837,12 +840,12 @@ class TestFormsender(unittest.TestCase):
         # Create message from request and call set_mail_subject()
         message = handler.create_msg(req)
         address = handler.send_to_address(message)
-        self.assertEqual(address, 'default')
+        self.assertEqual(address, 'OSLSupport')
 
     def test_send_to_address_with_key_only(self):
         """
         send_to_adress(message) returns the string in message['send_to']
-        when it is present, otherwise it returns 'default'
+        when it is present, otherwise it returns 'OSLSupport'
         """
 
         # Build test environment
@@ -858,7 +861,7 @@ class TestFormsender(unittest.TestCase):
         # Create message from request and call set_mail_subject()
         message = handler.create_msg(req)
         address = handler.send_to_address(message)
-        self.assertEqual(address, 'default')
+        self.assertEqual(address, 'OSLSupport')
 
     @patch('request_handler.validate_email')
     def test_same_submission(self, mock_validate_email):
@@ -870,12 +873,13 @@ class TestFormsender(unittest.TestCase):
                                        'email': 'example@osuosl.org',
                                        'last_name': '',
                                        'token': conf.TOKEN,
-                                       'redirect': 'http://www.example.com'})
+                                       'redirect': 'http://www.example.com',
+                                       'g-recaptcha-response': ''})
 
         env = builder.get_environ()
 
-        # Mock sendmail function so it doesn't send an actual email
-        smtplib.SMTP.sendmail = Mock('smtplib.SMTP.sendmail')
+        # Mock create_ticket function so it doesn't send an actual ticket
+        rt.rest2.Rt.create_ticket = Mock('rt.rest2.Rt.create_ticket')
         mock_validate_email.return_value = True
 
         # Create apps
@@ -911,78 +915,6 @@ class TestFormsender(unittest.TestCase):
         self.assertEqual(app.error, 'Duplicate Request')
 
     @patch('request_handler.validate_email')
-    def test_send_email_root(self, mock_validate_email):
-        """
-        Tests that the form is sent to the correct address.
-
-        Returns true if form is sent to root@ousosl.org
-        Errors out if unsuccesful
-        """
-        builder = EnvironBuilder(method='POST',
-                                 data={'name': 'Valid Guy',
-                                       'email': 'example@osuosl.com',
-                                       'send_to': 'root',
-                                       'last_name': '',
-                                       'token': conf.TOKEN,
-                                       'redirect': 'http://www.example.com'})
-
-        env = builder.get_environ()
-        req = Request(env)
-
-        # Construct message for assertion
-        msg = handler.create_msg(req)
-        msg_send = MIMEText(str(msg))
-        msg_subj = handler.set_mail_subject(msg)
-        msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['root']
-        msg_send['Sender'] = conf.SENDER
-
-        # Mock SMTP
-        with patch("smtplib.SMTP") as mock_smtp:
-            instance = mock_smtp.return_value
-            # Call send_email and assert sendmail was correctly called
-            handler.send_email(msg, msg_subj, send_to_email='root')
-            instance.sendmail.assert_called_with(conf.FROM['from_default'],
-                                                 conf.EMAIL['root'],
-                                                 msg_send.as_string())
-
-    @patch('request_handler.validate_email')
-    def test_send_email_support(self, mock_validate_email):
-        """
-        Tests that the form is sent to the correct address.
-
-        Returns true if the form has been sent to support@osuosl.org
-        Errors out if unsuccessful
-        """
-        builder = EnvironBuilder(method='POST',
-                                 data={'name': 'Valid Guy',
-                                       'email': 'example@osuosl.org',
-                                       'send_to': 'support',
-                                       'last_name': '',
-                                       'token': conf.TOKEN,
-                                       'redirect': 'http://www.example.com'})
-
-        env = builder.get_environ()
-        req = Request(env)
-
-        # Construct message for assertion
-        msg = handler.create_msg(req)
-        msg_send = MIMEText(str(msg))
-        msg_subj = handler.set_mail_subject(msg)
-        msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['support']
-        msg_send['Sender'] = conf.SENDER
-
-        # Mock SMTP
-        with patch("smtplib.SMTP") as mock_smtp:
-            # Call send_email and assert sendmail was correctly called
-            instance = mock_smtp.return_value
-            handler.send_email(msg, msg_subj, send_to_email='support')
-            instance.sendmail.assert_called_with(conf.FROM['from_default'],
-                                                 conf.EMAIL['support'],
-                                                 msg_send.as_string())
-
-    @patch('request_handler.validate_email')
     def test_send_email_default(self, mock_validate_email):
         """
         Tests that the form is sent to the correct default address when
@@ -1003,21 +935,19 @@ class TestFormsender(unittest.TestCase):
 
         # Construct message for assertion
         msg = handler.create_msg(req)
-        msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
-        msg_send['Subject'] = msg_subj
-        msg_send['To'] = conf.EMAIL['default']
-        msg_send['Sender'] = conf.SENDER
 
-        # Mock sendmail function
+        # Mock create_ticket function
+        with patch('rt.rest2.Rt') as mock_rt:
+            instance = mock_rt.return_value
+            handler.create_app()
 
-        with patch("smtplib.SMTP") as mock_smtp:
-            instance = mock_smtp.return_value
-            # Call send_email and assert sendmail was correctly called
+            # Call send_ticket and assert ticket creation returns new ticket ID
             handler.send_ticket(msg, msg_subj)
-            instance.sendmail.assert_called_with(conf.FROM['from_default'],
-                                                 conf.EMAIL['default'],
-                                                 msg_send.as_string())
+            instance.create_ticket.assert_called_with(queue='General',
+                                                      subject=msg_subj,
+                                                      requestor='from_default',
+                                                      content=msg)
 
     def test_server_status_view_responds_OK_on_GET(self):
         """
@@ -1123,6 +1053,7 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
+
 
 if __name__ == '__main__':
     unittest.main()

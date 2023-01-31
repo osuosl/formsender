@@ -7,7 +7,6 @@ emails it to a specified email
 """
 
 import os
-import smtplib
 import werkzeug
 import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 import hashlib
@@ -18,7 +17,6 @@ from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
 from werkzeug.wsgi import SharedDataMiddleware
 from jinja2 import Environment, FileSystemLoader
-from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
 import logging
@@ -228,7 +226,6 @@ class Controller:
         """
         self.time_diff = self.set_time_diff(self.start_time)
         if self.time_diff < 1 and self.rate > conf.CEILING:
-        #if self.time_diff < 1 and self.rate > conf.get('CEILING')
             return True
         elif self.time_diff > 1:
             self.reset_rate()
@@ -514,7 +511,7 @@ def send_to_address(message):
     if 'send_to' in message and message['send_to']:
         return message['send_to']
     # Otherwise, return default
-    return 'default'
+    return 'OSLSupport'
 
 
 def send_ticket(msg, subject, send_to_queue='General', mail_from='from_default'):
