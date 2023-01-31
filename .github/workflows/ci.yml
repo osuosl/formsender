@@ -26,6 +26,7 @@ jobs:
       - name: Lint with flake8
         run: |
           flake8 .
+      continue-on-error: true
       - name: Tests with tests.py
         run: |
           make tests

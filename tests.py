@@ -7,7 +7,6 @@ from email.mime.text import MIMEText
 import conf
 import time
 import request_handler as handler
-import requests.auth
 import rt
 
 
@@ -74,7 +73,6 @@ class TestFormsender(unittest.TestCase):
 
         # Construct message for assertion
         msg = handler.create_msg(req)
-        msg_send = MIMEText(str(msg))
         msg_subj = handler.set_mail_subject(msg)
 
         # Mock create_ticket function
