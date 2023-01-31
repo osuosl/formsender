@@ -9,10 +9,9 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.6"
+          - "3.6.15"
           - "3.9"
           - "3.10"
-        architecture: 'x86'
 
     steps:
       - uses: actions/checkout@v3
