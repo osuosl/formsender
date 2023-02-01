@@ -15,3 +15,4 @@ FROM = {'from_default': 'formsender@osuosl.org'}
 SENDER = "info@osuosl.org"
 LOG_ADDR = '/dev/log'
 RECAPTCHA_SECRET = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
+URL = "https://support.osuosl.org/REST/2.0/"

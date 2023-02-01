@@ -28,7 +28,9 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Tests with tests.py
         run: |
+          cp conf.py.dist conf.py
           make tests
+          rm -rf conf.py
 
   earlier-build-tests:
     # Python 3.6 must be run on Ubuntu 20 to avoid errors
@@ -54,4 +56,6 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Tests with tests.py
         run: |
+          cp conf.py.dist conf.py
           make tests
+          rm -rf conf.py
