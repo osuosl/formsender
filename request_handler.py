@@ -330,6 +330,7 @@ def is_valid_email(request):
         return valid_email
     return False
 
+
 def is_valid_recaptcha(request):
     """
     Check that recaptcha responce is valid
@@ -450,6 +451,7 @@ def format_message(msg):
 def convert_key_to_title(snake_case_key):
     """Replace underscores with spaces and convert to title case"""
     return snake_case_key.replace('_', ' ').title()
+
 
 def set_mail_subject(message):
     """

@@ -3,7 +3,6 @@ import werkzeug
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from mock import Mock, patch
-from email.mime.text import MIMEText
 import conf
 import time
 import request_handler as handler
