@@ -90,14 +90,14 @@ email:
 
 * **send_to**
 
-    sets email recipient to send_to's contents. This should be a string that
-    matches a key in the email dictionary found in conf.py. If send_to is not
-    included, the recipient will default to the ``default`` of the email dict.
-    This should be a hidden field.
+    sets the queue in RT that the ticket will be sent to. This should be a string
+    that matches an existing queue at ``support.osuosl.org``. If send_to is not
+    included, the queue will default to the ``General`` queue. This string
+    is case sensitive, and should be a hidden field.
 
-    example: ``<input type="hidden" name="send_to" value="another" />``
+    example: ``<input type="hidden" name="send_to" value="QueueName" />``
 
-    Note that the string, 'another', will map to its corresponding email.
+    Note that the string, 'QueueName', will map to its corresponding RT queue.
 
 * **mail_from**
 
