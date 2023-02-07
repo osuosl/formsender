@@ -7,8 +7,8 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      TOKEN: u'15674hsda//*q23%^13jnxccv3ds54sa4g4sa532323!OoRdsfISDIdks38*(dsfjk)aS'
-      RECAPTCHA_SECRET: "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
+      TOKEN: u's0m3T0k3n$tr1ng'
+      RECAPTCHA_SECRET: "validationstring"
     strategy:
       matrix:
         python-version:
