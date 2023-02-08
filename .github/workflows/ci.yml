@@ -6,6 +6,9 @@ jobs:
   build:
 
     environment: ci
+    env:
+      TOKEN: ${{ secrets.TOKEN }}
+      RECAPTCHA_SECRET: ${{ secrets.RECAPTCHA_SECRET }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -31,6 +34,3 @@ jobs:
         run: |
           cp conf.py.dist conf.py
           make tests
-	env: 
-          TOKEN: ${{ secrets.TOKEN }}
-          RECAPTCHA_SECRET: ${{ secrets.RECAPTCHA_SECRET }}
