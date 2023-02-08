@@ -6,6 +6,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+        TOKEN: ''
+        RECAPTCHA_SECRET: ""
     strategy:
       matrix:
         python-version:
