@@ -32,5 +32,4 @@ jobs:
       - name: Tests with tests.py
         run: |
           cp conf.py.dist conf.py
-          echo "Recaptcha: ${{ secrets.RECAPTCHA_SECRET }}"
           make tests
