@@ -4,7 +4,6 @@ on: [push]
 
 jobs:
   build:
-
     environment: ci
     env:
       TOKEN: ${{ secrets.TOKEN }}
@@ -34,3 +33,4 @@ jobs:
         run: |
           cp conf.py.dist conf.py
           make tests
+          echo "Recaptcha: ${{ secrets.RECAPTCHA_SECRET }}"
