@@ -6,9 +6,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    env:
-      TOKEN: u's0m3T0k3n$tr1ng'
-      RECAPTCHA_SECRET: "validationstring"
     strategy:
       matrix:
         python-version:
