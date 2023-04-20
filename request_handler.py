@@ -323,7 +323,7 @@ def is_valid_email(request):
     Check that email server exists at request.form['email']
     return the email if it is valid, False if not
     """
-    valid_email = validate_email(request.form.get('email'),
+    valid_email = validate_email(request.form['email'],
                                  check_mx=False,  # DNS resolution is not reliable
                                  verify=False)  # disabling RCPT is occasionally used to fight spam
     if valid_email:
