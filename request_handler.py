@@ -497,16 +497,15 @@ def send_to_address(message):
     return 'OSLSupport'
 
 
-def send_ticket(msg, subject, send_to_queue='General', mail_from='from_default'):
+def send_ticket(msg, subject, send_to_queue='General', mail_from='noreply@osuosl.org'):
     """Creates ticket and sends to RT"""
     # Creates connection to REST
     tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
     # Create ticket and send to RT
-    new_ticket = {'Requestor': ['{mail_from}']}
     tracker.create_ticket(queue=send_to_queue,
                           subject=subject,
                           content=msg,
-                          **new_ticket
+                          Requestors=mail_from
                          )
 
 
