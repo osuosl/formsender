@@ -3,9 +3,9 @@ Formsender
 
 ![travis](https://travis-ci.org/osuosl/formsender.svg?branch=develop)
 
-Formsender is a WSGI app that accepts a POST request from a form and emails the
-contents in a formatted message to a configurable address. Formsender can be
-deployed using a WSGI server of your choice.
+Formsender is a WSGI app that accepts a POST request from a form and uses the
+RT REST API to create and manage tickets at support.osuosl.org.
+Formsender can be deployed using a WSGI server of your choice.
 
 Deploy
 ------

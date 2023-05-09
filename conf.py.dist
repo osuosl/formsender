@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
+import os
 
-EMAIL = {'default': 'support@osuosl.org',
-         'support': 'support@osuosl.org',
-         'root': 'root@osuosl.org'}
-TOKEN = u'15674hsda//*q23%^13jnxccv3ds54sa4g4sa532323!OoRdsfISDIdks38*(dsfjk)aS'
+TOKEN = os.environ['TOKEN']
 CEILING = 10
 DUPLICATE_CHECK_TIME = 3600  # seconds -- 60 seconds * 60 minutes
 HOST = "0.0.0.0"
 PORT = 5000
-SMTP_HOST = "smtp.osuosl.org"
-FROM = {'from_default': 'formsender@osuosl.org'}
-SENDER = "info@osuosl.org"
 LOG_ADDR = '/dev/log'
-RECAPTCHA_SECRET = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
+RECAPTCHA_SECRET = os.environ['RECAPTCHA_SECRET']
+URL = "https://support.osuosl.org/REST/2.0/"

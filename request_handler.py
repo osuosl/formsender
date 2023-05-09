@@ -7,18 +7,16 @@ emails it to a specified email
 """
 
 import os
-import smtplib
 import werkzeug
-import urllib
+import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 import hashlib
-from urllib import urlencode
-from urllib2 import urlopen
+from urllib.parse import urlencode
+from urllib.request import urlopen
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
-from werkzeug.wsgi import SharedDataMiddleware
+from werkzeug.middleware.shared_data import SharedDataMiddleware
 from jinja2 import Environment, FileSystemLoader
-from email.mime.text import MIMEText
 from validate_email import validate_email
 from datetime import datetime
 import logging
@@ -26,9 +24,11 @@ import logging.handlers
 import conf
 import time
 import json
+import rt.rest2
+import requests.auth
 
 
-class Forms(object):
+class Forms:
     """
     This class listens for a form submission, checks that the data is valid, and
     sends the form data in a formatted message to the email specified in conf.py
@@ -137,7 +137,7 @@ class Forms(object):
             # If nothing above is true, there is no error
             return False
         # There is an error if it got this far
-        self.logger.warn('formsender: received %s: %s from %s',
+        self.logger.warning('formsender: received %s: %s from %s',
                          self.error,
                          request.form[invalid_option],
                          request.form['email'])
@@ -164,8 +164,8 @@ class Forms(object):
             # Should log full request
             self.logger.debug('formsender message: %s', message)
 
-            send_email(format_message(message), set_mail_subject(message),
-                       send_to_address(message), set_mail_from(message))
+            send_ticket(format_message(message), set_mail_subject(message),
+                        send_to_address(message), set_mail_from(message))
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -183,7 +183,7 @@ class Forms(object):
         return Response(template.render(), mimetype='text/html', status=400)
 
 
-class Controller(object):
+class Controller:
     """
     Track number of form submissions per second
 
@@ -236,7 +236,7 @@ class Controller(object):
         """Calculates a hash from a submission and adds it to the hash list"""
         # Create a hexidecmal hash of the submission using sha512
         init_hash = hashlib.sha512()
-        init_hash.update(str(submission))
+        init_hash.update((str(submission)).encode())
         sub_hash = init_hash.hexdigest()
         # If the time difference is under the limit in settings, check for a
         # duplicate hash in hash_list
@@ -309,9 +309,7 @@ def create_msg(request):
         # dict. request.form cannot be returned directly because it is a
         # multidict.
         for key in request.form:
-            safe_key = key.encode('utf-8')
-            safe_value = request.form[key].encode('utf-8')
-            message[safe_key] = safe_value
+            message[key] = request.form[key]
         # If there is a message, return it, otherwise return None
         if message:
             message['redirect'] = strip_query(message['redirect'])
@@ -331,6 +329,7 @@ def is_valid_email(request):
     if valid_email:
         return valid_email
     return False
+
 
 def is_valid_recaptcha(request):
     """
@@ -394,7 +393,7 @@ def is_valid_fields_to_join(request):
 def create_error_url(error_number, message, request):
     """Construct error message and append to redirect url"""
     values = [('error', str(error_number)), ('message', message)]
-    query = urllib.urlencode(values)
+    query = six.moves.urllib.parse.urlencode(values)
     return request.form['redirect'] + '?' + query
 
 
@@ -413,7 +412,7 @@ def format_message(msg):
                      'g-recaptcha-response']
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
-                 "NAME:   {0}\nEMAIL:   {1}\n"
+                 "NAME:   {}\nEMAIL:   {}\n"
                  "\nInformation:\n------------\n"
                  .format(msg['name'], msg['email']))
 
@@ -429,7 +428,7 @@ def format_message(msg):
         if 'fields_to_join_name' in msg and msg['fields_to_join_name'] not in msg:
             msg[str(msg['fields_to_join_name'])] = joined_data
         else:
-            msg[str('Fields To Join')] = joined_data
+            msg['Fields To Join'] = joined_data
         msg.pop('fields_to_join', None)
 
     # Create another dictionary that has lowercase title as key and original
@@ -443,7 +442,7 @@ def format_message(msg):
     for key in sorted(titles):
         if key not in hidden_fields:
             f_message += \
-                ('{0}:\n{1}\n\n'.format(convert_key_to_title(titles[key]),
+                ('{}:\n{}\n\n'.format(convert_key_to_title(titles[key]),
                                         msg[titles[key]]))
 
     return f_message
@@ -514,35 +513,19 @@ def send_to_address(message):
     if 'send_to' in message and message['send_to']:
         return message['send_to']
     # Otherwise, return default
-    return 'default'
+    return 'OSLSupport'
 
 
-def send_email(msg, subject, send_to_email='default',
-               mail_from='from_default'):
-    """Sets up and sends the email"""
-    # Format the message and set the subject
-    msg_send = MIMEText(str(msg))
-    msg_send['Subject'] = subject
-    msg_send['To'] = conf.EMAIL[send_to_email]
-    msg_send['Sender'] = conf.SENDER
-
-    # print(msg_send)
-    # Sets up a temporary mail server to send from
-    smtp = smtplib.SMTP(conf.SMTP_HOST)
-    # Attempts to send the mail to EMAIL, with the message formatted as a string
-    try:
-        if (mail_from != 'from_default'):
-            smtp.sendmail(mail_from,
-                          conf.EMAIL[send_to_email],
-                          msg_send.as_string())
-            smtp.quit()
-        else:
-            smtp.sendmail(conf.FROM[mail_from],
-                          conf.EMAIL[send_to_email],
-                          msg_send.as_string())
-            smtp.quit()
-    except RuntimeError:
-        smtp.quit()
+def send_ticket(msg, subject, send_to_queue='General', mail_from='from_default'):
+    """Creates ticket and sends to RT"""
+    # Creates connection to REST
+    tracker = rt.rest2.Rt(conf.URL, http_auth=requests.auth.HTTPBasicAuth('root', 'password'))
+    # Create ticket and send to RT
+    tracker.create_ticket(queue=send_to_queue,
+                          subject=subject,
+                          requestor=mail_from,
+                          content=msg
+                         )
 
 
 # Start application

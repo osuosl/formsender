@@ -9,22 +9,15 @@ directory. You can change the following variables to match your setup:
 
 .. code-block:: python
 
-    EMAIL = {'default': 'email@example.com',
-             'example': 'email@example.com',
-             'another': 'another_email@example.com'}
     TOKEN = u's0m3T0k3n$tr1ng'
     CEILING = 10
     DUPLICATE_CHECK_TIME = 3600
     HOST = "0.0.0.0"
     PORT = 5000
-    SMTP_HOST = "smtp.osuosl.org"
-    FROM = "formsender@osuosl.org"
     LOG_ADDR = '/dev/log'
+    RECAPTCHA_SECRET = "validationstring"
+    URL = 'https://support.osuosl.org/REST/2.0/"
 
-* ``EMAIL`` is a dictionary of emails. It contains the different email addresses
-  to which the form creator can send an email. This will be set in an optional
-  ``send_to`` field on the form. If the user decides not to include/fill out the
-  ``send_to`` field, an email should be sent to 'default'.
 * ``TOKEN`` is the validating token from the form. This must match a hidden
   field in your form called 'token'. You can find and set the ``TOKEN`` variable
   in your conf.py file. Just make sure you also set the hidden ``token`` field
@@ -34,12 +27,12 @@ directory. You can change the following variables to match your setup:
 * ``DUPLICATE_CHECK_TIME`` is the time (in seconds) to check past form
   submissions for duplicate submissions.
 * ``HOST`` and ``PORT`` is where the ``run_simple`` listener listens for POST
-  requests
-* ``SMTP_HOST`` sets the host for the ``sendmail`` function. Must be a smtp
-  server
-* ``FROM`` is the address the email will be sent from
+  requests.
 * ``LOG_ADDR`` specifies where the formsender logs will be sent. This must point
   to where syslog is listening on your server/workstation.
+* ``RECAPTCHA_SECRET`` is a validating string used in development to verify
+  the form submission of the development user.
+* ``URL`` specifies where the RT REST API instance will send tickets to.
 
 Set Up A Development Instance
 -----------------------------
