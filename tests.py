@@ -82,7 +82,7 @@ class TestFormsender(unittest.TestCase):
             handler.send_ticket(msg, msg_subj)
             instance.create_ticket.assert_called_with(queue='General',
                                                       subject=msg_subj,
-                                                      Requestors='noreply@osuosl.org',
+                                                      Requestor='noreply@osuosl.org',
                                                       content=msg)
 
     @patch('request_handler.validate_email')
@@ -861,7 +861,7 @@ class TestFormsender(unittest.TestCase):
             handler.send_ticket(msg, msg_subj)
             instance.create_ticket.assert_called_with(queue='General',
                                                       subject=msg_subj,
-                                                      Requestors='noreply@osuosl.org',
+                                                      Requestor='noreply@osuosl.org',
                                                       content=msg)
 
     def test_server_status_view_responds_OK_on_GET(self):

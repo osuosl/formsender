@@ -7,6 +7,7 @@ emails it to a specified email
 """
 
 import os
+import sys
 import werkzeug
 import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 import hashlib
@@ -282,7 +283,7 @@ def create_app(with_static=True):
     """
     # Initiate a logger
     logger = logging.getLogger('formsender')
-    handler = logging.handlers.SysLogHandler(address=conf.LOG_ADDR)
+    handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter('%(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -505,7 +506,7 @@ def send_ticket(msg, subject, send_to_queue='General', mail_from='noreply@osuosl
     tracker.create_ticket(queue=send_to_queue,
                           subject=subject,
                           content=msg,
-                          Requestors=mail_from
+                          Requestor=mail_from
                          )
 
 
