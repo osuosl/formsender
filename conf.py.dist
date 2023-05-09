@@ -11,3 +11,4 @@ PORT = 5000
 LOG_ADDR = '/dev/log'
 RECAPTCHA_SECRET = os.environ['RECAPTCHA_SECRET']
 URL = "https://support.osuosl.org/REST/2.0/"
+RT_TOKEN = os.environ['RT_TOKEN']
