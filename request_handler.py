@@ -158,9 +158,6 @@ class Forms:
             if 'send_to' in message and message['send_to']:
                 self.logger.debug('formsender: sending email to: %s',
                                   message['send_to'])
-            if 'mail_from' in message and message['mail_from']:
-                self.logger.debug('formsender: sending email from: %s',
-                                  message['mail_from'])
             # Should log full request
             self.logger.debug('formsender message: %s', message)
 
@@ -493,9 +490,6 @@ def set_mail_from(message):
     Returns a string to be used to fill the 'from' field of and email
     If no from address is provided in the html form, return 'from_default'
     """
-    # If a from address is included in html form, return it
-    if 'mail_from' in message and message['mail_from']:
-        return message['mail_from']
     # If there is no explicit mail_from, return the  user's submitted email
     if 'email' in message and message['email']:
         return message['email']
@@ -516,7 +510,7 @@ def send_to_address(message):
     return 'OSLSupport'
 
 
-def send_ticket(msg, subject, send_to_queue='General', mail_from='from_default'):
+def send_ticket(msg, subject, send_to_queue='General', mail_from):
     """Creates ticket and sends to RT"""
     # Creates connection to REST
     tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
