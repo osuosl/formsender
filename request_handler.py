@@ -158,14 +158,11 @@ class Forms:
             if 'send_to' in message and message['send_to']:
                 self.logger.debug('formsender: sending email to: %s',
                                   message['send_to'])
-            if 'mail_from' in message and message['mail_from']:
-                self.logger.debug('formsender: sending email from: %s',
-                                  message['mail_from'])
             # Should log full request
             self.logger.debug('formsender message: %s', message)
 
             send_ticket(format_message(message), set_mail_subject(message),
-                        send_to_address(message), set_mail_from(message))
+                        send_to_address(message), message['email'])
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -486,22 +483,6 @@ def set_mail_subject(message):
 
     # Otherwise mail_subject if it has something or the default
     return mail_subject if mail_subject else 'Form Submission'
-
-
-def set_mail_from(message):
-    """
-    Returns a string to be used to fill the 'from' field of and email
-    If no from address is provided in the html form, return 'from_default'
-    """
-    # If a from address is included in html form, return it
-    if 'mail_from' in message and message['mail_from']:
-        return message['mail_from']
-    # If there is no explicit mail_from, return the  user's submitted email
-    if 'email' in message and message['email']:
-        return message['email']
-    # If neither mail_from nor email is available, return from_default
-    return 'from_default'
-
 
 def send_to_address(message):
     """
