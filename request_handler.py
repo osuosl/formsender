@@ -519,7 +519,7 @@ def send_to_address(message):
 def send_ticket(msg, subject, send_to_queue='General', mail_from='from_default'):
     """Creates ticket and sends to RT"""
     # Creates connection to REST
-    tracker = rt.rest2.Rt(conf.URL, http_auth=requests.auth.HTTPBasicAuth('root', 'password'))
+    tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
     # Create ticket and send to RT
     tracker.create_ticket(queue=send_to_queue,
                           subject=subject,

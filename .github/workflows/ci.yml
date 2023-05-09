@@ -8,6 +8,7 @@ jobs:
     env:
       TOKEN: ${{ secrets.TOKEN }}
       RECAPTCHA_SECRET: ${{ secrets.RECAPTCHA_SECRET }}
+      RT_TOKEN: ${{ secrets.RT_TOKEN }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
