@@ -26,8 +26,6 @@ import conf
 import time
 import json
 import rt.rest2
-import requests.auth
-
 
 class Forms:
     """

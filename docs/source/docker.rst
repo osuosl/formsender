@@ -15,16 +15,8 @@ running:
 
 ::
 
-   $ docker-compose build
+   $ docker build -t formsender .
 
-
-If changes have been made, run:
-
-::
-
-   $ docker-compose build --no-cache
-
-This tells docker to include the updated source code in the build.
 
 Run Formsender in the Container
 -------------------------------
@@ -33,7 +25,7 @@ Now that the container has been built, you can run the app in the container:
 
 ::
 
-   $ docker-compose up
+   $ docker run -p 5000:5000
 
 If the original settings in conf.py, Dockerfile, and docker-compose.yml are
 unchanged, Formsender will now be running on the docker container's port 5000,
