@@ -9,6 +9,7 @@ jobs:
       TOKEN: ${{ secrets.TOKEN }}
       RECAPTCHA_SECRET: ${{ secrets.RECAPTCHA_SECRET }}
       RT_TOKEN: ${{ secrets.RT_TOKEN }}
+      SENTRY_URI: ${{ secrets.SENTRY_URI }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
