@@ -18,6 +18,7 @@ directory. You can change the following variables to match your setup:
     RECAPTCHA_SECRET = "validationstring"
     URL = 'https://support.osuosl.org/REST/2.0/'
     RT_TOKEN = 'fake_rt_token'
+    SENTRY_URI = "https://sentry.dsn.key"
 
 * ``TOKEN`` is the validating token from the form. This must match a hidden
   field in your form called 'token'. You can find and set the ``TOKEN`` variable
@@ -35,6 +36,7 @@ directory. You can change the following variables to match your setup:
   the form submission of the development user.
 * ``URL`` specifies where the RT REST API instance will send tickets to.
 * ``RT_TOKEN`` validates RT REST API connection.
+* ``SENTRY_URI`` sets up Sentry SDK when running entrypoint.sh (optional) 
 
 Set Up A Development Instance
 -----------------------------
