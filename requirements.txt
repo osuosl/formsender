@@ -9,7 +9,7 @@ mccabe==0.7.0
 mock==5.0.2
 pycodestyle==2.10.0
 pyflakes==3.0.1
-requests==2.30.0
+requests==2.31.0
 requests-toolbelt==1.0.0
 rt==3.0.5
 six==1.16.0
