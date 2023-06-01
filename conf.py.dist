@@ -12,4 +12,4 @@ LOG_ADDR = '/dev/log'
 RECAPTCHA_SECRET = os.environ['RECAPTCHA_SECRET']
 URL = "https://support.osuosl.org/REST/2.0/"
 RT_TOKEN = os.environ['RT_TOKEN']
-SENTRY_URI = os.environ['SENTRY_URI']
+SENTRY_URI = os.environ.get('SENTRY_URI')
