@@ -8,11 +8,5 @@ if conf.SENTRY_URI:
     sentry_sdk.init(dsn=conf.SENTRY_URI)
     application = create_app()
 
-    # intentional error for testing
-    try:
-        division_by_zero = 1 / 0
-    except Exception as e:
-        capture_exception(e)
-
 else:
     application = create_app()
