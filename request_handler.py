@@ -9,7 +9,9 @@ emails it to a specified email
 import os
 import sys
 import werkzeug
-import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+import six.moves.urllib.request
+import six.moves.urllib.parse
+import six.moves.urllib.error
 import hashlib
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -26,7 +28,6 @@ import conf
 import time
 import json
 import rt.rest2
-import requests.auth
 
 
 class Forms:
@@ -139,9 +140,9 @@ class Forms:
             return False
         # There is an error if it got this far
         self.logger.warning('formsender: received %s: %s from %s',
-                         self.error,
-                         request.form[invalid_option],
-                         request.form['email'])
+                            self.error,
+                            request.form[invalid_option],
+                            request.form['email'])
         return error_number
 
     def handle_no_error(self, request):
@@ -344,8 +345,8 @@ def is_valid_recaptcha(request):
         'remote_ip': request.remote_addr,
     })
 
-    google_response   = urlopen(recaptchaURL, URLParams.encode('utf-8')).read()
-    recaptcha_result  = json.loads(google_response)
+    google_response = urlopen(recaptchaURL, URLParams.encode('utf-8')).read()
+    recaptcha_result = json.loads(google_response)
     recaptcha_success = recaptcha_result.get('success', None)
 
     return recaptcha_success
@@ -441,7 +442,7 @@ def format_message(msg):
         if key not in hidden_fields:
             f_message += \
                 ('{}:\n{}\n\n'.format(convert_key_to_title(titles[key]),
-                                        msg[titles[key]]))
+                                      msg[titles[key]]))
 
     return f_message
 
@@ -485,6 +486,7 @@ def set_mail_subject(message):
     # Otherwise mail_subject if it has something or the default
     return mail_subject if mail_subject else 'Form Submission'
 
+
 def send_to_address(message):
     """
     Returns a string to be used as the address the email is being sent to
@@ -507,7 +509,7 @@ def send_ticket(msg, subject, send_to_queue='General', mail_from='noreply@osuosl
                           subject=subject,
                           content=msg,
                           Requestor=mail_from
-                         )
+                          )
 
 
 # Start application

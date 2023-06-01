@@ -1,14 +1,12 @@
 from request_handler import create_app
 import conf
 
-if conf.RAVEN_URI:
-    from raven import Client
-    from raven.middleware import Sentry
+if conf.SENTRY_URI:
+    import sentry_sdk
+    from sentry_sdk import capture_exception
 
-    application = Sentry(
-        create_app(),
-        Client(conf.RAVEN_URI)
-    )
+    sentry_sdk.init(dsn=conf.SENTRY_URI)
+    application = create_app()
 
 else:
     application = create_app()
