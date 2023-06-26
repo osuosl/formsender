@@ -10,7 +10,7 @@ mock==5.0.2
 pycodestyle==2.10.0
 pyflakes==3.0.1
 requests-toolbelt==1.0.0
-rt==3.0.5
+rt==3.0.6
 six==1.16.0
 urllib3==2.0.3
 validate-email==1.3
