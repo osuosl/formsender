@@ -308,7 +308,7 @@ def create_msg(request):
         # dict. request.form cannot be returned directly because it is a
         # multidict.
         for key in request.form:
-            message[key] = request.form[key]
+            message[key] = request.form.get(key)
         # If there is a message, return it, otherwise return None
         if message:
             message['redirect'] = strip_query(message['redirect'])
