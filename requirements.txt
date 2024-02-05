@@ -1,4 +1,4 @@
-certifi==2023.11.17
+certifi==2024.2.2
 charset-normalizer==3.3.2
 flake8==7.0.0
 gunicorn==21.2.0
