@@ -1,4 +1,4 @@
-anyio==4.6.2
+anyio==4.6.2.post1
 certifi==2024.8.30
 charset-normalizer==3.4.0
 flake8==7.1.1
