@@ -12,7 +12,7 @@ MarkupSafe==3.0.2
 mccabe==0.7.0
 mock==5.2.0
 packaging==24.2
-pycodestyle==2.12.1
+pycodestyle==2.13.0
 pyflakes==3.2.0
 requests==2.32.3
 requests-toolbelt==1.0.0
