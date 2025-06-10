@@ -3,14 +3,14 @@ from setuptools import find_packages
 
 dependencies = [
     'flake8==2.4.1',
-    'Jinja2==2.7.3',
+    'Jinja2>=3.1.6',
     'MarkupSafe==0.23',
     'mock==1.0.1',
     'pydns==2.3.6',
     'redis==2.10.3',
     'validate-email==1.3',
-    'Werkzeug==0.10.4',
-    'wheel==0.24.0'
+    'werkzeug>=3.0.6',
+    'wheel>=0.38.1'
 ]
 
 setup(
