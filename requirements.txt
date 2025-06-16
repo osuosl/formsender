@@ -20,7 +20,7 @@ rt==3.3.6
 sentry-sdk==2.29.1
 six==1.17.0
 sniffio==1.3.1
-typing_extensions==4.12.2
+typing_extensions==4.14.0
 urllib3==2.4.0
 validate-email==1.3
 Werkzeug==3.1.3
