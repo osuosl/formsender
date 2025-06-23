@@ -1,7 +1,7 @@
 anyio==4.9.0
 certifi==2025.6.15
 charset-normalizer==3.4.2
-flake8==7.2.0
+flake8==7.3.0
 gunicorn==23.0.0
 h11==0.16.0
 httpcore==1.0.9
@@ -12,8 +12,8 @@ MarkupSafe==3.0.2
 mccabe==0.7.0
 mock==5.2.0
 packaging==25.0
-pycodestyle==2.13.0
-pyflakes==3.3.2
+pycodestyle==2.14.0
+pyflakes==3.4.0
 requests==2.32.4
 requests-toolbelt==1.0.0
 rt==3.3.6
