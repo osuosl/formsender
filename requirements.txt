@@ -13,7 +13,7 @@ mccabe==0.7.0
 mock==5.2.0
 packaging==25.0
 pycodestyle==2.14.0
-pyflakes==3.3.2
+pyflakes==3.4.0
 requests==2.32.4
 requests-toolbelt==1.0.0
 rt==3.3.6
