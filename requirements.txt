@@ -2,7 +2,7 @@ anyio==4.12.1
 certifi==2026.1.4
 charset-normalizer==3.4.4
 flake8==7.3.0
-gunicorn==24.1.1
+gunicorn==25.0.3
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
