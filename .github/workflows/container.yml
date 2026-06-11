@@ -29,8 +29,31 @@ jobs:
         with:
           context: .
           tags: osuosl/formsender:test
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Smoke test the image
+        env:
+          TOKEN: ci-token
+          RECAPTCHA_SECRET: ci-recaptcha-secret
+          RT_TOKEN: ci-rt-token
+        run: |
+          docker run -d --name formsender -p 5000:5000 \
+            -e TOKEN -e RECAPTCHA_SECRET -e RT_TOKEN \
+            osuosl/formsender:test
+          for i in $(seq 1 10); do
+            if curl -fsS http://localhost:5000/server-status; then
+              echo " - server-status OK"
+              break
+            fi
+            if [ "$i" -eq 10 ]; then
+              echo "server-status did not come up"
+              docker logs formsender
+              exit 1
+            fi
+            sleep 2
+          done
+          docker rm -f formsender
       - name: Log in to the Container registry
         if: contains(fromJSON('["push", "schedule"]'), github.event_name)
         uses: docker/login-action@v3

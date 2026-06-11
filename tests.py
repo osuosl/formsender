@@ -1,7 +1,10 @@
 import unittest
 import werkzeug
+from io import BytesIO
+from datetime import datetime, timedelta
 from werkzeug.wrappers import Request
-from werkzeug.test import EnvironBuilder
+from werkzeug.test import EnvironBuilder, Client
+from werkzeug.datastructures import MultiDict
 from mock import Mock, patch
 import conf
 import time
@@ -85,8 +88,83 @@ class TestFormsender(unittest.TestCase):
                                                       Requestor='noreply@osuosl.org',
                                                       content=msg)
 
+    def test_extract_attachments(self):
+        """
+        Tests extract_attachments
+
+        An uploaded file becomes an rt.rest2.Attachment carrying the original
+        filename, content type, and bytes; empty file inputs are ignored.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data={'name': 'Valid Guy',
+                                       'email': 'example@osuosl.org',
+                                       'rfcfile': (BytesIO(b'proposal bytes'),
+                                                   'proposal.pdf',
+                                                   'application/pdf'),
+                                       'emptyfile': (BytesIO(b''), '')})
+        req = Request(builder.get_environ())
+
+        attachments = handler.extract_attachments(req)
+
+        self.assertEqual(len(attachments), 1)
+        self.assertEqual(attachments[0].file_name, 'proposal.pdf')
+        self.assertEqual(attachments[0].file_type, 'application/pdf')
+        self.assertEqual(attachments[0].file_content, b'proposal bytes')
+
+    def test_send_ticket_with_attachments(self):
+        """
+        Tests send_ticket passes attachments through to create_ticket only when
+        files are present.
+        """
+        attachment = rt.rest2.Attachment('proposal.pdf', 'application/pdf',
+                                         b'proposal bytes')
+        with patch('rt.rest2.Rt') as mock_rt:
+            instance = mock_rt.return_value
+            handler.send_ticket('body', 'subj', 'General',
+                                'noreply@osuosl.org', [attachment])
+            instance.create_ticket.assert_called_with(
+                queue='General', subject='subj', content='body',
+                Requestor='noreply@osuosl.org', attachments=[attachment])
+
+    def test_extract_custom_fields(self):
+        """
+        Tests extract_custom_fields
+
+        A declarative 'custom_fields' mapping turns form fields into an RT
+        CustomFields dict; single values stay scalar, repeated values (e.g.
+        checkbox groups) become a list, and consumed field names are returned.
+        """
+        builder = EnvironBuilder(method='POST',
+                                 data=MultiDict([
+                                     ('custom_fields',
+                                      'CompanyName:companyname,'
+                                      'WorkingGroups:workgroups'),
+                                     ('companyname', 'OPF'),
+                                     ('workgroups', 'AI'),
+                                     ('workgroups', 'Hardware')]))
+        req = Request(builder.get_environ())
+
+        custom_fields, consumed = handler.extract_custom_fields(req)
+
+        self.assertEqual(custom_fields['CompanyName'], 'OPF')
+        self.assertEqual(custom_fields['WorkingGroups'], ['AI', 'Hardware'])
+        self.assertEqual(consumed, {'companyname', 'workgroups'})
+
+    def test_format_message_excludes_custom_fields(self):
+        """
+        Tests format_message leaves excluded (custom-field) source fields out of
+        the ticket body.
+        """
+        msg = {'name': 'Valid Guy', 'email': 'example@osuosl.org',
+               'companyname': 'OPF', 'message': 'hello'}
+        body = handler.format_message(msg, exclude={'companyname'})
+        self.assertNotIn('OPF', body)
+        self.assertIn('hello', body)
+
+    @patch('request_handler.is_valid_recaptcha')
     @patch('request_handler.validate_email')
-    def test_validations_valid_data(self, mock_validate_email):
+    def test_validations_valid_data(self, mock_validate_email,
+                                    mock_recaptcha):
         """
         Tests the form validation with valid data.
 
@@ -102,8 +180,9 @@ class TestFormsender(unittest.TestCase):
                                        'g-recaptcha-response': ''})
         env = builder.get_environ()
         req = Request(env)
-        # Mock external validate_email so returns true in Travis
+        # Mock external services so they return valid in CI
         mock_validate_email.return_value = True
+        mock_recaptcha.return_value = True
         app = handler.create_app()
         # Mock create_ticket function so it doesn't send an actual ticket
         rt.rest2.Rt = Mock('rt.rest2.Rt')
@@ -330,8 +409,10 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         self.assertFalse(handler.is_valid_token(req))
 
+    @patch('request_handler.is_valid_recaptcha')
     @patch('request_handler.validate_email')
-    def test_rate_limiter_valid_rate(self, mock_validate_email):
+    def test_rate_limiter_valid_rate(self, mock_validate_email,
+                                     mock_recaptcha):
         """
         Tests rate limiter with a valid rate
         """
@@ -342,8 +423,9 @@ class TestFormsender(unittest.TestCase):
                                        'token': conf.TOKEN,
                                        'redirect': 'http://www.example.com',
                                        'g-recaptcha-response': ''})
-        # Mock validate email so returns true in Travis
+        # Mock external services so they return valid in CI
         mock_validate_email.return_value = True
+        mock_recaptcha.return_value = True
         # Mock create_ticket function so it doesn't send an actual ticket
         rt.rest2.Rt = Mock('rt.rest2.Rt')
         app = handler.create_app()
@@ -383,8 +465,10 @@ class TestFormsender(unittest.TestCase):
 
         self.assertEqual(app.error, 'Too Many Requests')
 
+    @patch('request_handler.is_valid_recaptcha')
     @patch('request_handler.validate_email')
-    def test_redirect_url_valid_data(self, mock_validate_email):
+    def test_redirect_url_valid_data(self, mock_validate_email,
+                                     mock_recaptcha):
         """
         Tests the user is redirected to appropriate location
         """
@@ -400,8 +484,9 @@ class TestFormsender(unittest.TestCase):
         env = builder.get_environ()
         req = Request(env)
 
-        # Mock validate email so returns true in Travis
+        # Mock external services so they return valid in CI
         mock_validate_email.return_value = True
+        mock_recaptcha.return_value = True
 
         # Create app and mock redirect
         app = handler.create_app()
@@ -778,8 +863,9 @@ class TestFormsender(unittest.TestCase):
         address = handler.send_to_address(message)
         self.assertEqual(address, 'OSLSupport')
 
+    @patch('request_handler.is_valid_recaptcha')
     @patch('request_handler.validate_email')
-    def test_same_submission(self, mock_validate_email):
+    def test_same_submission(self, mock_validate_email, mock_recaptcha):
         """
         Tests that the same form is not sent twice.
         """
@@ -796,6 +882,7 @@ class TestFormsender(unittest.TestCase):
         # Mock create_ticket function so it doesn't send an actual ticket
         rt.rest2.Rt.create_ticket = Mock('rt.rest2.Rt.create_ticket')
         mock_validate_email.return_value = True
+        mock_recaptcha.return_value = True
 
         # Create apps
         app = handler.create_app()
@@ -968,6 +1055,125 @@ class TestFormsender(unittest.TestCase):
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
+
+    # WSGI dispatch / routing
+
+    def test_wsgi_server_status_ok(self):
+        """
+        A GET to /server-status routed through the full WSGI stack
+        (__call__ -> wsgi_app -> dispatch_request) returns HTTP 200.
+        """
+        app = handler.create_app(with_static=False)
+        client = Client(app)
+        resp = client.get('/server-status')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_wsgi_unknown_route_returns_404(self):
+        """
+        A request to an unmapped URL raises an HTTPException that
+        dispatch_request catches and returns to the client as a 404.
+        """
+        app = handler.create_app(with_static=False)
+        client = Client(app)
+        resp = client.get('/does-not-exist')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_on_form_page_get_renders_error(self):
+        """
+        A GET (non-POST) to the form page with otherwise valid fields falls
+        through to the local error page (HTTP 400).
+        """
+        app = handler.create_app()
+        req = Request(EnvironBuilder(method='GET').get_environ())
+        with patch.object(handler.Forms, 'are_fields_invalid',
+                          return_value=False):
+            resp = app.on_form_page(req)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_handle_no_error_empty_message_renders_error(self):
+        """
+        When create_msg yields no message, handle_no_error renders the local
+        error page instead of creating a ticket.
+        """
+        app = handler.create_app()
+        req = Request(EnvironBuilder(method='POST', data={}).get_environ())
+        with patch('request_handler.create_msg', return_value=None):
+            resp = app.handle_no_error(req)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_handle_no_error_forwards_attachment_and_custom_fields(self):
+        """
+        handle_no_error builds the ticket with the requested queue, uploaded
+        attachments, and declared custom fields, then redirects.
+        """
+        builder = EnvironBuilder(method='POST', data={
+            'name': 'Valid Guy',
+            'email': 'example@osuosl.org',
+            'redirect': 'http://www.example.com',
+            'send_to': 'SomeQueue',
+            'custom_fields': 'CompanyName:companyname',
+            'companyname': 'OPF',
+            'attachment': (BytesIO(b'file data'), 'doc.txt'),
+        })
+        req = Request(builder.get_environ())
+        app = handler.create_app()
+        with patch('rt.rest2.Rt') as mock_rt:
+            instance = mock_rt.return_value
+            resp = app.handle_no_error(req)
+
+        self.assertEqual(resp.status_code, 302)
+        _, kwargs = instance.create_ticket.call_args
+        self.assertEqual(kwargs['queue'], 'SomeQueue')
+        self.assertEqual(kwargs['CustomFields'], {'CompanyName': 'OPF'})
+        self.assertEqual(len(kwargs['attachments']), 1)
+        self.assertEqual(kwargs['attachments'][0].file_name, 'doc.txt')
+
+    # Attachment / custom-field edge cases
+
+    def test_extract_attachments_skips_empty_content(self):
+        """A file input with a name but no content is not attached."""
+        req = Request(EnvironBuilder(method='POST', data={
+            'f': (BytesIO(b''), 'empty.txt')}).get_environ())
+        self.assertEqual(handler.extract_attachments(req), [])
+
+    def test_extract_custom_fields_skips_invalid_entries(self):
+        """
+        Mapping entries without a colon, and entries pointing at empty/missing
+        form fields, are ignored.
+        """
+        req = Request(EnvironBuilder(method='POST', data=MultiDict([
+            ('custom_fields', 'NoColon,Good:companyname,Empty:blankfield'),
+            ('companyname', 'OPF'),
+            ('blankfield', '')])).get_environ())
+        custom_fields, consumed = handler.extract_custom_fields(req)
+        self.assertEqual(custom_fields, {'Good': 'OPF'})
+        self.assertEqual(consumed, {'companyname'})
+
+    # Controller reset branches
+
+    def test_controller_rate_violation_resets_after_a_second(self):
+        """
+        After more than a second elapses, is_rate_violation resets the rate
+        counter and reports no violation.
+        """
+        controller = handler.Controller()
+        controller.start_time = datetime.now() - timedelta(seconds=2)
+        controller.rate = conf.CEILING + 5
+        self.assertFalse(controller.is_rate_violation())
+        self.assertEqual(controller.rate, 0)
+
+    def test_controller_duplicate_resets_after_timeout(self):
+        """
+        Once DUPLICATE_CHECK_TIME has passed, the hash list is reset and the
+        submission is no longer considered a duplicate.
+        """
+        controller = handler.Controller()
+        controller.hash_list = ['oldhash']
+        controller.start_time_hash = (
+            datetime.now()
+            - timedelta(seconds=conf.DUPLICATE_CHECK_TIME + 1))
+        self.assertFalse(controller.is_duplicate('whatever'))
+        self.assertEqual(controller.hash_list, [])
 
 
 if __name__ == '__main__':
