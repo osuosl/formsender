@@ -1,6 +1,12 @@
 ---
 name: Create and publish a Docker image
 
+# Pushes to master and the weekly schedule publish the rolling tags. Pull
+# requests from this repository additionally publish a throwaway
+# ghcr.io/osuosl/formsender:pr-<number> image (updated on every push to the PR)
+# so changes can be exercised in a production-ish way -- e.g. by pointing a
+# Test Kitchen suite at that tag. Fork PRs still build and smoke-test the image
+# but cannot publish (their GITHUB_TOKEN is read-only).
 on:
   push:
     branches:
@@ -19,6 +25,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # Publish on push/schedule, and on pull requests that originate from this
+      # repo (fork PRs get a read-only token and cannot push to the registry).
+      PUBLISH: ${{ github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,23 +65,26 @@ jobs:
           done
           docker rm -f formsender
       - name: Log in to the Container registry
-        if: contains(fromJSON('["push", "schedule"]'), github.event_name)
+        if: env.PUBLISH == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract metadata (tags, labels) for Docker
-        if: contains(fromJSON('["push", "schedule"]'), github.event_name)
+        if: env.PUBLISH == 'true'
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # branch push -> <branch> (e.g. master); pull request -> pr-<number>;
+          # schedule -> the scheduled ref name.
           tags: |
             type=ref,event=branch
+            type=ref,event=pr
             type=schedule,${{ github.ref_name }}
       - name: Build and push Docker image
-        if: contains(fromJSON('["push", "schedule"]'), github.event_name)
+        if: env.PUBLISH == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .

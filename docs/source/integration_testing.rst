@@ -140,6 +140,15 @@ Confirm it is up:
     $ curl -s http://localhost:5000/server-status
     OK
 
+.. note::
+
+   Every pull request opened from this repository publishes a throwaway image
+   tagged ``pr-<number>`` (for example ``ghcr.io/osuosl/formsender:pr-42``),
+   rebuilt on each push to the PR. Point a deployment at that tag -- for
+   instance a Test Kitchen suite, or ``RT_URL``-configured container above -- to
+   exercise a change in a production-ish way before it merges. The image is
+   deleted automatically when the PR is closed.
+
 4. Point the websites at Formsender
 -----------------------------------
 

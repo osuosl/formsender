@@ -1,0 +1,38 @@
+---
+name: Clean up PR image
+
+# When a pull request closes (merged or not), delete the throwaway
+# ghcr.io/osuosl/formsender:pr-<number> image that the container workflow
+# published for it, so per-PR images don't accumulate in the registry.
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-pr-image:
+    runs-on: ubuntu-latest
+    # Fork PRs never published an image (their token is read-only), so there is
+    # nothing to clean up for them.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      packages: write
+    steps:
+      - name: Delete the pr-<number> image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: pr-${{ github.event.number }}
+        run: |
+          owner="${GITHUB_REPOSITORY%%/*}"
+          package="${GITHUB_REPOSITORY##*/}"
+          # Find the container version whose tags include this PR's tag.
+          version_id=$(gh api --paginate \
+            "/orgs/$owner/packages/container/$package/versions" \
+            --jq ".[] | select(.metadata.container.tags[]? == \"$TAG\") | .id" \
+            | head -n1)
+          if [ -n "$version_id" ]; then
+            gh api -X DELETE \
+              "/orgs/$owner/packages/container/$package/versions/$version_id"
+            echo "Deleted $package:$TAG (version $version_id)"
+          else
+            echo "No image tagged $TAG found; nothing to delete"
+          fi
