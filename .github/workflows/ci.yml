@@ -1,37 +1,44 @@
 name: Python package
 
-on: [push]
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    environment: ci
-    env:
-      TOKEN: ${{ secrets.TOKEN }}
-      RECAPTCHA_SECRET: ${{ secrets.RECAPTCHA_SECRET }}
-      RT_TOKEN: ${{ secrets.RT_TOKEN }}
-      SENTRY_URI: ${{ secrets.SENTRY_URI }}
     runs-on: ubuntu-latest
+    # The test suite mocks all external calls (reCAPTCHA, RT), so it needs the
+    # config keys to exist but not real secrets. Dummy values keep CI runnable
+    # on fork pull requests, which cannot access repository secrets.
+    env:
+      TOKEN: ci-token
+      RECAPTCHA_SECRET: ci-recaptcha-secret
+      RT_TOKEN: ci-rt-token
     strategy:
       matrix:
         python-version:
-          - "3.11"
           - "3.12"
+          - "3.13"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
       - name: Install dependencies
-        run: | 
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Lint with flake8
         run: |
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Tests with tests.py
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Lint with flake8
+        run: make flake
+      - name: Tests with coverage
         run: |
           cp conf.py.dist conf.py
-          make tests
+          make coverage

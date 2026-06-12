@@ -4,3 +4,6 @@ venv/
 .venv/
 conf.py
 docs/build/
+.coverage
+htmlcov/
+.claude/

@@ -10,13 +10,13 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
    info
    usage
    form_setup
    errorcodes
-   *
+   docker
+   integration_testing
 
 
 

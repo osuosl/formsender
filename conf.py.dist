@@ -6,10 +6,10 @@ import os
 TOKEN = os.environ['TOKEN']
 CEILING = 10
 DUPLICATE_CHECK_TIME = 3600  # seconds -- 60 seconds * 60 minutes
+MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # max upload size in bytes (10 MiB)
 HOST = "0.0.0.0"
 PORT = 5000
-LOG_ADDR = '/dev/log'
 RECAPTCHA_SECRET = os.environ['RECAPTCHA_SECRET']
-URL = "https://support.osuosl.org/REST/2.0/"
+URL = os.environ.get('RT_URL', "https://support.osuosl.org/REST/2.0/")
 RT_TOKEN = os.environ['RT_TOKEN']
 SENTRY_URI = os.environ.get('SENTRY_URI')

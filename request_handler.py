@@ -1,9 +1,10 @@
 """
 WSGI Application
 
-This application listens for a form. When a form is submitted, this application
-takes the information submitted, formats it into a python dictionary, then
-emails it to a specified email
+This application listens for a form submission. When a form is submitted, this
+application validates and rate-limits the data, formats it into a message, and
+creates a ticket in RT via the RT REST2 API. Any uploaded files are attached to
+the ticket and declared form fields can be mapped to RT custom fields.
 """
 
 import os
@@ -66,6 +67,11 @@ class Forms:
         Starts wsgi_app by creating a Request and Response based on the Request
         """
         request = Request(environ)
+        # Cap the total request body so file uploads can't exhaust memory. An
+        # oversized body raises RequestEntityTooLarge (413) when form/files are
+        # parsed, which dispatch_request returns as an HTTP error.
+        request.max_content_length = getattr(conf, 'MAX_CONTENT_LENGTH',
+                                             10 * 1024 * 1024)
         response = self.dispatch_request(request)
         return response(environ, start_response)
 
@@ -85,7 +91,7 @@ class Forms:
 
     def on_form_page(self, request):
         """
-        Checks for valid form data, calls send_email, returns a redirect
+        Checks for valid form data, creates an RT ticket, returns a redirect
         """
         # Increment rate because we received a request
         self.controller.increment_rate()
@@ -147,24 +153,34 @@ class Forms:
 
     def handle_no_error(self, request):
         """
-        Creates a message and sends an email with no error, then redirects to
-        provided redirect url
+        Creates a message and an RT ticket when there is no error, then
+        redirects to the provided redirect url
         """
         message = create_msg(request)
         if message:
             self.logger.debug('formsender: name is: %s', message['name'])
-            self.logger.debug('formsender: sending email from: %s',
+            self.logger.debug('formsender: creating ticket from: %s',
                               message['email'])
             # The following are optional fields, so first check that they exist
             # in the message
             if 'send_to' in message and message['send_to']:
-                self.logger.debug('formsender: sending email to: %s',
+                self.logger.debug('formsender: ticket queue: %s',
                                   message['send_to'])
             # Should log full request
             self.logger.debug('formsender message: %s', message)
 
-            send_ticket(format_message(message), set_mail_subject(message),
-                        send_to_address(message), message['email'])
+            attachments = extract_attachments(request)
+            for attachment in attachments:
+                self.logger.debug('formsender: attaching file: %s',
+                                  attachment.file_name)
+            custom_fields, cf_sources = extract_custom_fields(request)
+            if custom_fields:
+                self.logger.debug('formsender: custom fields: %s',
+                                  list(custom_fields))
+            send_ticket(format_message(message, cf_sources),
+                        set_mail_subject(message),
+                        send_to_address(message), message['email'],
+                        attachments, custom_fields)
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -401,14 +417,20 @@ def strip_query(url):
     return url.split('?', 1)[0]
 
 
-def format_message(msg):
-    """Formats a dict (msg) into a nice-looking string"""
+def format_message(msg, exclude=None):
+    """Formats a dict (msg) into a nice-looking string
+
+    Fields named in ``exclude`` (e.g. those already sent as RT custom fields)
+    are left out of the body to avoid duplication.
+    """
     # Ignore these fields when writing to formatted message
     hidden_fields = ['redirect', 'last_name', 'token', 'op',
                      'name', 'email', 'mail_subject', 'send_to',
                      'fields_to_join_name', 'support', 'ibm_power',
                      'mail_subject_prefix', 'mail_subject_key',
-                     'g-recaptcha-response']
+                     'custom_fields', 'g-recaptcha-response']
+    if exclude:
+        hidden_fields += list(exclude)
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {}\nEMAIL:   {}\n"
@@ -500,20 +522,78 @@ def send_to_address(message):
     return 'OSLSupport'
 
 
-def send_ticket(msg, subject, send_to_queue='General', mail_from='noreply@osuosl.org'):
+def extract_attachments(request):
+    """
+    Turn any uploaded files in the request into rt.rest2.Attachment objects so
+    they can be attached to the RT ticket. Files only arrive when the form is
+    submitted as multipart/form-data; empty file inputs are skipped.
+    """
+    attachments = []
+    for _, file_storage in request.files.items(multi=True):
+        if not file_storage or not file_storage.filename:
+            continue
+        content = file_storage.read()
+        if not content:
+            continue
+        file_type = file_storage.mimetype or 'application/octet-stream'
+        attachments.append(rt.rest2.Attachment(file_storage.filename,
+                                               file_type, content))
+    return attachments
+
+
+def extract_custom_fields(request):
+    """
+    Build an RT CustomFields dict from a declarative form mapping.
+
+    A hidden ``custom_fields`` field lists ``CFName:form_field`` pairs separated
+    by commas, e.g. ``CompanyName:companyname,WorkingGroups:workgroups``. Each
+    form field's value(s) are sent to the matching RT custom field; a field with
+    multiple values (e.g. a checkbox group) is sent as a list for multi-value
+    custom fields.
+
+    Returns a tuple of (custom_fields_dict, set_of_consumed_form_field_names) so
+    the consumed fields can be omitted from the ticket body.
+    """
+    custom_fields = {}
+    consumed = set()
+    spec = request.form.get('custom_fields', '')
+    for item in spec.split(','):
+        item = item.strip()
+        if not item or ':' not in item:
+            continue
+        cf_name, field = (part.strip() for part in item.split(':', 1))
+        values = [v for v in request.form.getlist(field) if v != '']
+        if not cf_name or not field or not values:
+            continue
+        custom_fields[cf_name] = values[0] if len(values) == 1 else values
+        consumed.add(field)
+    return custom_fields, consumed
+
+
+def send_ticket(msg, subject, send_to_queue='General',
+                mail_from='noreply@osuosl.org', attachments=None,
+                custom_fields=None):
     """Creates ticket and sends to RT"""
     # Creates connection to REST
     tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
+    ticket_args = {
+        'queue': send_to_queue,
+        'subject': subject,
+        'content': msg,
+        'Requestor': mail_from,
+    }
+    # Only pass attachments/custom fields when present, so the call is unchanged
+    # for forms that submit no files or custom fields.
+    if attachments:
+        ticket_args['attachments'] = attachments
+    if custom_fields:
+        ticket_args['CustomFields'] = custom_fields
     # Create ticket and send to RT
-    tracker.create_ticket(queue=send_to_queue,
-                          subject=subject,
-                          content=msg,
-                          Requestor=mail_from
-                          )
+    tracker.create_ticket(**ticket_args)
 
 
 # Start application
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     from werkzeug.serving import run_simple
     # Creates the app
     app = create_app()
