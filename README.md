@@ -56,8 +56,11 @@ To set up a development instance and run the tests, check out the
 (http://formsender.readthedocs.org/en/latest/usage.html). In short:
 
 ```
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime deps + lint/test/docs tooling
 cp conf.py.dist conf.py
 make flake      # lint
 make coverage   # run the test suite with a coverage report
 ```
+
+The production image installs only `requirements.txt` (runtime dependencies);
+`requirements-dev.txt` adds the lint, test, and Sphinx docs tooling on top.

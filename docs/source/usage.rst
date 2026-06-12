@@ -80,11 +80,13 @@ To set up a development instance, first start a virtual environment like so:
     $ source venv/bin/activate
 
 
-Now install the requirements:
+Now install the development requirements (these pull in the runtime
+requirements plus the lint, test, and docs tooling; the production image
+installs only ``requirements.txt``):
 
 .. code-block:: none
 
-    $ pip install -r requirements.txt
+    $ pip install -r requirements-dev.txt
 
 
 Before you run Formsender, copy the contents of ``conf.py.dist`` into a new file
