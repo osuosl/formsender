@@ -31,11 +31,11 @@ jobs:
       PUBLISH: ${{ github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Build and export Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           tags: osuosl/formsender:test
@@ -66,7 +66,7 @@ jobs:
           docker rm -f formsender
       - name: Log in to the Container registry
         if: env.PUBLISH == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -74,7 +74,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         if: env.PUBLISH == 'true'
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           # branch push -> <branch> (e.g. master); pull request -> pr-<number>;
@@ -85,7 +85,7 @@ jobs:
             type=schedule,${{ github.ref_name }}
       - name: Build and push Docker image
         if: env.PUBLISH == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
