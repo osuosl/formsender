@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 
 COPY conf.py.dist /formsender/conf.py
 COPY requirements.txt /formsender/requirements.txt
