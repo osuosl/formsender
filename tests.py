@@ -1138,16 +1138,19 @@ class TestFormsender(unittest.TestCase):
 
     def test_extract_custom_fields_skips_invalid_entries(self):
         """
-        Mapping entries without a colon, and entries pointing at empty/missing
-        form fields, are ignored.
+        Mapping entries without a colon, or with an empty CF name or field
+        name, are ignored entirely. An entry pointing at an empty form field
+        sets no custom field, but the field is still consumed so an unfilled
+        optional field does not show up as a blank line in the ticket body.
         """
         req = Request(EnvironBuilder(method='POST', data=MultiDict([
-            ('custom_fields', 'NoColon,Good:companyname,Empty:blankfield'),
+            ('custom_fields',
+             'NoColon,:headless,Tailless:,Good:companyname,Empty:blankfield'),
             ('companyname', 'OPF'),
             ('blankfield', '')])).get_environ())
         custom_fields, consumed = handler.extract_custom_fields(req)
         self.assertEqual(custom_fields, {'Good': 'OPF'})
-        self.assertEqual(consumed, {'companyname'})
+        self.assertEqual(consumed, {'companyname', 'blankfield'})
 
     # Controller reset branches
 

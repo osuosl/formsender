@@ -562,11 +562,16 @@ def extract_custom_fields(request):
         if not item or ':' not in item:
             continue
         cf_name, field = (part.strip() for part in item.split(':', 1))
+        if not cf_name or not field:
+            continue
+        # The form field is claimed by the mapping, so keep it out of the
+        # ticket body even when empty (an unfilled optional field should not
+        # show up as a blank line).
+        consumed.add(field)
         values = [v for v in request.form.getlist(field) if v != '']
-        if not cf_name or not field or not values:
+        if not values:
             continue
         custom_fields[cf_name] = values[0] if len(values) == 1 else values
-        consumed.add(field)
     return custom_fields, consumed
 
 
