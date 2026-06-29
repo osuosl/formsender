@@ -9,6 +9,11 @@ updates:
       python-dependencies:
         patterns:
           - "*"
+    ignore:
+      # Sphinx 9.1.0 pins docutils<0.23, so hold docutils below 0.23
+      # until a Sphinx release supports it (sphinx-doc/sphinx#14455).
+      - dependency-name: "docutils"
+        versions: [">=0.23"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
