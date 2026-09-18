@@ -93,6 +93,57 @@ These must be supplied in the environment Formsender runs in (for example with
 .. _Cloudflare Turnstile: https://developers.cloudflare.com/turnstile/
 .. _ALTCHA: https://altcha.org/
 
+Creating a Cloudflare Turnstile widget
+--------------------------------------
+
+Turnstile is configured per site in the Cloudflare dashboard, under
+**Turnstile**, then **Add widget**. A widget is one site key and secret key
+pair, so create one widget per website rather than one per form. A free Cloudflare account is
+enough, and the website does not need to be proxied through Cloudflare.
+
+Fill the **Add Widget** form in as follows:
+
+Widget name
+    Free text, only used to identify the widget in the dashboard later. Name it
+    after the site it protects and the application using it, for example
+    ``osuosl.org formsender``.
+
+Hostnames
+    The hostnames allowed to display this widget. This is the **website's** own
+    hostname, not Formsender's, so the OSL widget lists ``osuosl.org`` and the
+    OpenPOWER Foundation widget lists ``openpowerfoundation.org``. A hostname
+    also covers its subdomains, so ``openpowerfoundation.org`` already allows
+    ``www.openpowerfoundation.org`` and there is no need to add it. A free
+    account allows up to ten hostnames per widget. Do not add ``localhost``
+    here; use the test credentials in the :ref:`integration_testing`
+    documentation for local work instead.
+
+Widget Mode
+    **Managed**. Cloudflare then decides per visitor how much friction to
+    apply, so most people get a non-interactive check and only risky traffic
+    sees a challenge. Non-interactive and Invisible both lower that ceiling,
+    which is the opposite of what a spam problem calls for.
+
+Skip future security rule challenges for verified visitors
+    Leave this **off**. Pre-clearance issues a cookie that bypasses Cloudflare
+    WAF rules, and it only does anything when the site is proxied through
+    Cloudflare. It has no effect on whether Formsender accepts a submission.
+
+Creating the widget produces the two keys, both shown on the widget's page in
+the dashboard:
+
+* The **site key** is public. It goes in the form markup as ``data-sitekey``
+  (see the `form setup documentation`_) and can live in the website's
+  repository.
+* The **secret key** is private. It becomes Formsender's ``TURNSTILE_SECRET``.
+  Keep it out of the website's repository; in the OSL deployment it belongs in
+  the encrypted Chef data bag the container reads its environment from.
+
+If you set ``CAPTCHA_ALLOWED_HOSTNAMES``, note that it is matched exactly and
+does not imply subdomains the way the widget's own hostname list does. List
+every hostname that actually serves a form, so a site reachable as both
+``example.org`` and ``www.example.org`` needs both entries.
+
 In-file settings
 ----------------
 

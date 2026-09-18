@@ -48,7 +48,9 @@ Include required fields by setting the ``name`` property to the following:
   configured on the Formsender instance (see :ref:`usage`).
 
   * **cf-turnstile-response** - `Cloudflare Turnstile`_ (recommended). Add the
-    widget where the checkbox should appear and load the script once:
+    widget where the checkbox should appear and load the script once. The site
+    key comes from the Cloudflare dashboard; see :ref:`usage` for what to put
+    in each field when creating the widget.
 
     .. code-block:: html
 
