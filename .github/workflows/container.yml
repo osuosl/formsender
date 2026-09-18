@@ -45,15 +45,19 @@ jobs:
       - name: Smoke test the image
         env:
           TOKEN: ci-token
-          RECAPTCHA_SECRET: ci-recaptcha-secret
+          TURNSTILE_SECRET: ci-turnstile-secret
+          ALTCHA_HMAC_KEY: ci-altcha-key
           RT_TOKEN: ci-rt-token
         run: |
           docker run -d --name formsender -p 5000:5000 \
-            -e TOKEN -e RECAPTCHA_SECRET -e RT_TOKEN \
+            -e TOKEN -e TURNSTILE_SECRET -e ALTCHA_HMAC_KEY -e RT_TOKEN \
             osuosl/formsender:test
           for i in $(seq 1 10); do
             if curl -fsS http://localhost:5000/server-status; then
               echo " - server-status OK"
+              # The ALTCHA challenge endpoint exercises the captcha module
+              curl -fsS http://localhost:5000/altcha | grep -q '"parameters"'
+              echo " - altcha challenge OK"
               break
             fi
             if [ "$i" -eq 10 ]; then

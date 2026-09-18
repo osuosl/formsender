@@ -18,7 +18,15 @@ defines the remaining tunables as plain values:
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # bytes
     HOST = "0.0.0.0"
     PORT = 5000
-    RECAPTCHA_SECRET = os.environ['RECAPTCHA_SECRET']
+    TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT') or 0)
+    TURNSTILE_SECRET = os.environ.get('TURNSTILE_SECRET')
+    ALTCHA_HMAC_KEY = os.environ.get('ALTCHA_HMAC_KEY')
+    RECAPTCHA_SECRET = os.environ.get('RECAPTCHA_SECRET')
+    CAPTCHA_ALLOWED_HOSTNAMES = os.environ.get('CAPTCHA_ALLOWED_HOSTNAMES')
+    RECAPTCHA_MIN_SCORE = 0.5
+    ALTCHA_ALGORITHM = 'PBKDF2/SHA-256'
+    ALTCHA_COST = 5000
+    ALTCHA_EXPIRES = 600
     URL = os.environ.get('RT_URL', "https://support.osuosl.org/REST/2.0/")
     RT_TOKEN = os.environ['RT_TOKEN']
     SENTRY_URI = os.environ.get('SENTRY_URI')
@@ -32,10 +40,47 @@ These must be supplied in the environment Formsender runs in (for example with
 * ``TOKEN`` is the shared secret used to authenticate a form submission. It must
   match the hidden ``token`` field in your form. See the
   `form setup documentation`_.
-* ``RECAPTCHA_SECRET`` is the reCAPTCHA secret key. Formsender uses it to verify
-  the ``g-recaptcha-response`` submitted by the form against Google's
-  ``siteverify`` endpoint. Pair it with the reCAPTCHA site key embedded in your
-  form.
+* At least one captcha provider secret. A form picks its provider by which
+  response field it posts (see the `form setup documentation`_), and Formsender
+  only accepts providers whose secret is set, so an instance can serve several
+  sites during a migration and drop a provider by unsetting its secret.
+
+  .. warning::
+
+     The submission chooses the provider, not the server. Any provider
+     configured on an instance can be used by any form it serves, so a bot can
+     answer a Turnstile form with whichever configured provider it finds
+     easiest. Configure only the providers your forms actually use, and unset
+     each one as soon as the last form using it has migrated.
+
+  * ``TURNSTILE_SECRET`` is the `Cloudflare Turnstile`_ widget secret. Formsender
+    verifies the ``cf-turnstile-response`` field against Cloudflare's
+    ``siteverify`` endpoint. Pair it with the site key embedded in your form.
+    Turnstile is free and the site does not need to be behind Cloudflare.
+  * ``ALTCHA_HMAC_KEY`` enables `ALTCHA`_, a self-hosted proof-of-work captcha.
+    Formsender issues signed challenges from its ``/altcha`` endpoint and
+    verifies the ``altcha`` field locally, so no third-party service is
+    involved. Use a long random string (for example ``openssl rand -hex 32``).
+    The key signs the challenges, so it must be **the same on every container
+    serving a site and stable across restarts**; a container that mints its own
+    key rejects every challenge issued by another one. ALTCHA also carries no
+    origin information, so ``CAPTCHA_ALLOWED_HOSTNAMES`` cannot apply to it.
+  * ``RECAPTCHA_SECRET`` is the Google reCAPTCHA secret key (v2 or v3).
+    Formsender verifies the ``g-recaptcha-response`` field against Google's
+    ``siteverify`` endpoint. Note that Google's free tier is limited to 10,000
+    verifications a month per Google Cloud project.
+* ``CAPTCHA_ALLOWED_HOSTNAMES`` (optional) is a comma-separated list of
+  hostnames. When set, a Turnstile or reCAPTCHA token is only accepted if the
+  provider reports it was solved on one of those hosts. This stops a token
+  minted on another site that shares the same key pair from being replayed.
+  Setting it to a value that names no hostnames is a configuration error and
+  Formsender refuses to start, rather than silently skipping the check.
+* ``TRUSTED_PROXY_COUNT`` (optional, default ``0``) is the number of
+  ``X-Forwarded-For`` hops to trust. Set it to ``1`` when Formsender runs
+  behind a single reverse proxy such as HAProxy. Without it the captcha
+  provider is told the proxy's IP address instead of the sender's, which
+  degrades the provider's own risk scoring. Leave it at ``0`` when Formsender
+  is reachable directly, where the header can be forged.
 * ``RT_TOKEN`` is the RT authentication token used to connect to the RT REST2
   API. It belongs to an RT user with permission to create tickets in the target
   queues.
@@ -44,6 +89,9 @@ These must be supplied in the environment Formsender runs in (for example with
   a different RT instance, so one container can be run per RT instance.
 * ``SENTRY_URI`` (optional) is a Sentry DSN. When set, errors are reported to
   Sentry.
+
+.. _Cloudflare Turnstile: https://developers.cloudflare.com/turnstile/
+.. _ALTCHA: https://altcha.org/
 
 In-file settings
 ----------------
@@ -57,6 +105,22 @@ These are defined directly in ``conf.py`` and can be edited as needed:
 * ``MAX_CONTENT_LENGTH`` is the maximum size (in bytes) of a submitted request
   body, including any file uploads. Larger requests are rejected with a ``413``
   error. Defaults to 10 MiB.
+* ``RECAPTCHA_MIN_SCORE`` is the lowest reCAPTCHA v3 score (0.0 to 1.0) that
+  is accepted. It has no effect on v2 keys, which return no score.
+* ``ALTCHA_ALGORITHM`` and ``ALTCHA_COST`` set the proof-of-work function and
+  its iteration count for ALTCHA challenges. Raising the cost makes every
+  submission (human or bot) spend more CPU in the browser, and costs the server
+  the same work again when it verifies. The algorithm must be one of
+  ``PBKDF2/SHA-256`` (the default, and what the browser widget expects),
+  ``PBKDF2/SHA-384``, ``PBKDF2/SHA-512``, ``SHA-256``, ``SHA-384`` or
+  ``SHA-512``. Formsender refuses to start on any other value. Note that the
+  cost is a weak lever: it falls on every visitor's browser as much as on a
+  bot, so ALTCHA raises the price of bulk submission rather than preventing
+  it. Use Turnstile where that matters.
+* ``ALTCHA_EXPIRES`` is how long (in seconds) an issued ALTCHA challenge can be
+  redeemed. A redeemed challenge is refused afterwards, but that record lives
+  in one worker process, so with several workers or containers a solved
+  challenge can be spent once per worker within this window. Keep it short.
 * ``HOST`` and ``PORT`` are the interface and port the development server
   (``make run``) listens on. In production the bind address is set by the WSGI
   server instead (see ``entrypoint.sh``).
@@ -91,7 +155,7 @@ installs only ``requirements.txt``):
 
 Before you run Formsender, copy the contents of ``conf.py.dist`` into a new file
 called ``conf.py`` as described above, and export the required environment
-variables (``TOKEN``, ``RECAPTCHA_SECRET``, ``RT_TOKEN``).
+variables (``TOKEN``, ``RT_TOKEN``, and at least one captcha secret).
 
 You can lint the application with flake8:
 
@@ -100,7 +164,7 @@ You can lint the application with flake8:
     $ make flake
 
 Run the test suite (the tests mock all external calls, so no real RT or
-reCAPTCHA credentials are needed):
+captcha credentials are needed):
 
 .. code-block:: none
 

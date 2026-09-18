@@ -12,11 +12,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # The test suite mocks all external calls (reCAPTCHA, RT), so it needs the
-    # config keys to exist but not real secrets. Dummy values keep CI runnable
-    # on fork pull requests, which cannot access repository secrets.
+    # The test suite mocks all external calls (captcha verifiers, RT), so it
+    # needs the config keys to exist but not real secrets. Dummy values keep CI
+    # runnable on fork pull requests, which cannot access repository secrets.
     env:
       TOKEN: ci-token
+      TURNSTILE_SECRET: ci-turnstile-secret
+      ALTCHA_HMAC_KEY: ci-altcha-key
       RECAPTCHA_SECRET: ci-recaptcha-secret
       RT_TOKEN: ci-rt-token
     strategy:

@@ -1,3 +1,6 @@
+# Major versions change the challenge protocol; keep in step with the
+# altcha browser widget major documented in docs/source/form_setup.rst.
+altcha==2.1.0
 anyio==4.15.1
 certifi==2026.7.22
 charset-normalizer==3.5.1

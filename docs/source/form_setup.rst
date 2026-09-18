@@ -42,15 +42,41 @@ Include required fields by setting the ``name`` property to the following:
 
     example: ``<input type="hidden" name="redirect" value="http://www.example.com" />``
 
-* **g-recaptcha-response** - a valid reCAPTCHA response token. Formsender
-  verifies it server-side against Google's ``siteverify`` endpoint using the
-  ``RECAPTCHA_SECRET`` setting. This field is produced automatically by the
-  reCAPTCHA widget, so including the widget in your form is enough:
+* **a captcha response** - exactly one of the fields below, produced
+  automatically by the matching widget. Formsender picks the provider from the
+  field name and verifies it server-side; the provider's secret must be
+  configured on the Formsender instance (see :ref:`usage`).
+
+  * **cf-turnstile-response** - `Cloudflare Turnstile`_ (recommended). Add the
+    widget where the checkbox should appear and load the script once:
+
+    .. code-block:: html
+
+      <div class="cf-turnstile" data-sitekey="your-turnstile-site-key"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  * **altcha** - `ALTCHA`_, a self-hosted proof-of-work captcha. The widget
+    fetches a challenge from Formsender's ``/altcha`` endpoint (which sends the
+    CORS headers the browser needs), solves it in the background and stores
+    the solution in a hidden ``altcha`` field. No third-party service or site
+    key is involved. Load the widget from a CDN or vendor it into your site:
+
+    .. code-block:: html
+
+      <altcha-widget challenge="https://formsender.example.org/altcha" auto="onsubmit"></altcha-widget>
+      <script async defer type="module" src="https://cdn.jsdelivr.net/npm/altcha@3/dist/main/altcha.js"></script>
+
+  * **g-recaptcha-response** - Google reCAPTCHA v2 or v3. Kept so existing
+    forms keep working while they migrate; new forms should use one of the
+    options above.
 
     .. code-block:: html
 
       <div class="g-recaptcha" data-sitekey="your-recaptcha-site-key"></div>
       <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+.. _Cloudflare Turnstile: https://developers.cloudflare.com/turnstile/
+.. _ALTCHA: https://altcha.org/
 
 Optional Fields
 ---------------

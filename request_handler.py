@@ -14,11 +14,10 @@ import six.moves.urllib.request
 import six.moves.urllib.parse
 import six.moves.urllib.error
 import hashlib
-from urllib.parse import urlencode
-from urllib.request import urlopen
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.middleware.shared_data import SharedDataMiddleware
 from jinja2 import Environment, FileSystemLoader
 from validate_email import validate_email
@@ -26,9 +25,13 @@ from datetime import datetime
 import logging
 import logging.handlers
 import conf
+import captcha
 import time
 import json
 import rt.rest2
+
+# Redeemed ALTCHA challenges kept in memory per worker process
+MAX_SEEN_CHALLENGES = 10000
 
 
 class Forms:
@@ -49,6 +52,7 @@ class Forms:
         self.url_map = Map([
             Rule('/', endpoint='form_page'),
             Rule('/server-status', endpoint='server_status'),
+            Rule('/altcha', endpoint='altcha'),
             ])
         self.logger = logger
 
@@ -89,12 +93,40 @@ class Forms:
         # Do not process anything else
         return Response('', status=400)
 
+    def on_altcha(self, request):
+        """Issues a fresh ALTCHA challenge for the widget"""
+        # Forms live on other origins, so this needs CORS headers, and a
+        # challenge must never be cached because each one is single use.
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': '*',
+            'Cache-Control': 'no-store',
+        }
+        if request.method == 'OPTIONS':
+            return Response('', status=204, headers=headers)
+        if request.method not in ('GET', 'HEAD'):
+            return Response('', status=405, headers=headers)
+        if not getattr(conf, 'ALTCHA_HMAC_KEY', None):
+            return Response('ALTCHA is not configured', status=404,
+                            headers=headers)
+        # Minting shares the submission rate limit so a flood of challenges
+        # cannot be turned into verification work later
+        self.controller.increment_rate()
+        if self.controller.is_rate_violation():
+            self.logger.warning('formsender: refusing altcha challenge, rate '
+                                'limit exceeded')
+            return Response('', status=429, headers=headers)
+        return Response(json.dumps(captcha.create_altcha_challenge()),
+                        mimetype='application/json', headers=headers)
+
     def on_form_page(self, request):
         """
         Checks for valid form data, creates an RT ticket, returns a redirect
         """
         # Increment rate because we received a request
         self.controller.increment_rate()
+        self.controller.pending_challenge = None
         self.error = None
         error_number = self.are_fields_invalid(request)
         if request.method == 'POST' and error_number:
@@ -133,13 +165,15 @@ class Forms:
             self.error = 'Too Many Requests'
             error_number = 4
             invalid_option = 'name'
-        elif self.controller.is_duplicate(create_msg(request)):
+        elif not self.is_valid_captcha(request):
+            self.error = 'Invalid Captcha'
+            error_number = 6
+            invalid_option = 'name'
+        # This one records the submission, so it has to run last: a rejected
+        # submission must not make the sender's corrected retry a duplicate
+        elif self.controller.is_duplicate(dedup_message(request)):
             self.error = 'Duplicate Request'
             error_number = 5
-            invalid_option = 'name'
-        elif not is_valid_recaptcha(request):
-            self.error = 'Invalid Recaptcha'
-            error_number = 6
             invalid_option = 'name'
         else:
             # If nothing above is true, there is no error
@@ -150,6 +184,13 @@ class Forms:
                             request.form[invalid_option],
                             request.form['email'])
         return error_number
+
+    def is_valid_captcha(self, request):
+        """Verifies the captcha response and logs which provider handled it"""
+        valid, provider = captcha.is_valid_captcha(request, self.controller)
+        if valid:
+            self.logger.debug('formsender: captcha verified by %s', provider)
+        return valid
 
     def handle_no_error(self, request):
         """
@@ -166,8 +207,10 @@ class Forms:
             if 'send_to' in message and message['send_to']:
                 self.logger.debug('formsender: ticket queue: %s',
                                   message['send_to'])
-            # Should log full request
-            self.logger.debug('formsender message: %s', message)
+            # Full request, minus the captcha payload
+            self.logger.debug('formsender message: %s',
+                              {key: value for key, value in message.items()
+                               if key not in captcha.FIELDS})
 
             attachments = extract_attachments(request)
             for attachment in attachments:
@@ -181,6 +224,8 @@ class Forms:
                         set_mail_subject(message),
                         send_to_address(message), message['email'],
                         attachments, custom_fields)
+            # The ticket exists, so the captcha has been used up
+            self.controller.commit_challenge()
             redirect_url = message['redirect']
             return werkzeug.utils.redirect(redirect_url, code=302)
         else:
@@ -217,6 +262,9 @@ class Controller:
         self.time_diff_hash = 0
         self.start_time_hash = datetime.now()
         self.hash_list = []
+        # ALTCHA challenges already redeemed: nonce -> expiry (unix time)
+        self.seen_challenges = {}
+        self.pending_challenge = None
 
     def set_time_diff(self, begin_time):
         """Returns time difference between begin_time and now in seconds"""
@@ -291,6 +339,39 @@ class Controller:
         self.hash_list.append(sub_hash)
         return False
 
+    # ALTCHA replay check
+    def is_replayed_challenge(self, nonce, expires_at):
+        """Returns True if this ALTCHA challenge was already redeemed"""
+        # Like the rate and duplicate state this lives in one worker process,
+        # so a solved challenge can still be spent once per worker.
+        self.prune_challenges()
+        if nonce in self.seen_challenges:
+            return True
+        # Held, not spent: a submission that fails later must leave the
+        # sender's solved challenge usable on their retry
+        self.pending_challenge = (nonce, expires_at)
+        return False
+
+    def commit_challenge(self):
+        """Marks the checked ALTCHA challenge spent, once a ticket exists"""
+        if self.pending_challenge:
+            nonce, expires_at = self.pending_challenge
+            self.seen_challenges[nonce] = expires_at
+            self.pending_challenge = None
+
+    def prune_challenges(self):
+        """Drops expired entries, and the oldest if still oversized"""
+        now = time.time()
+        self.seen_challenges = {seen: expiry for seen, expiry
+                                in self.seen_challenges.items()
+                                if expiry > now}
+        if len(self.seen_challenges) >= MAX_SEEN_CHALLENGES:
+            # Bound memory when flooded with distinct challenges
+            by_expiry = sorted(self.seen_challenges,
+                               key=self.seen_challenges.get)
+            for stale in by_expiry[:len(by_expiry) // 2]:
+                del self.seen_challenges[stale]
+
 
 # Standalone/helper functions
 def create_app(with_static=True):
@@ -298,13 +379,20 @@ def create_app(with_static=True):
     Initializes Controller (controller) and Forms (app) objects, pass
     controller to app to keep track of number of submissions per minute
     """
-    # Initiate a logger
+    # Initiate a logger, once per process
     logger = logging.getLogger('formsender')
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('%(levelname)s %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter('%(levelname)s %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
+
+    # Refuse to start without a captcha backend rather than silently accept
+    # (or silently reject) every submission
+    providers = captcha.check_configuration()
+    logger.info('formsender: captcha providers configured: %s',
+                ', '.join(providers))
 
     # Initiate rate/duplicate controller and application
     controller = Controller()
@@ -313,6 +401,11 @@ def create_app(with_static=True):
         app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
             '/static':  os.path.join(os.path.dirname(__file__), 'static')
         })
+    # Behind a proxy REMOTE_ADDR is the proxy, which is useless to a captcha
+    # verifier, so trust that many X-Forwarded-For hops when told to
+    trusted = int(getattr(conf, 'TRUSTED_PROXY_COUNT', 0) or 0)
+    if trusted:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=trusted)
     return app
 
 
@@ -333,6 +426,17 @@ def create_msg(request):
     return None
 
 
+def dedup_message(request):
+    """The submission as the duplicate check sees it"""
+    # A captcha response is unique per submission, so leaving it in would make
+    # every submission hash differently and no duplicate would ever be found.
+    message = create_msg(request) or {}
+    # Sorted, because the hash is taken over the string form and the browser
+    # decides what order the fields arrive in
+    return sorted((key, value) for key, value in message.items()
+                  if key not in captcha.FIELDS)
+
+
 def is_valid_email(request):
     """
     Check that email server exists at request.form['email']
@@ -344,28 +448,6 @@ def is_valid_email(request):
     if valid_email:
         return valid_email
     return False
-
-
-def is_valid_recaptcha(request):
-    """
-    Check that recaptcha responce is valid
-    by sending a POST request to google's servers
-    """
-
-    recaptchaURL = 'https://www.google.com/recaptcha/api/siteverify'
-    recaptcha_response = request.form['g-recaptcha-response']
-    secret_key = conf.RECAPTCHA_SECRET
-    URLParams = urlencode({
-        'secret':    secret_key,
-        'response':  recaptcha_response,
-        'remote_ip': request.remote_addr,
-    })
-
-    google_response = urlopen(recaptchaURL, URLParams.encode('utf-8')).read()
-    recaptcha_result = json.loads(google_response)
-    recaptcha_success = recaptcha_result.get('success', None)
-
-    return recaptcha_success
 
 
 def validate_name(request):
@@ -428,7 +510,7 @@ def format_message(msg, exclude=None):
                      'name', 'email', 'mail_subject', 'send_to',
                      'fields_to_join_name', 'support', 'ibm_power',
                      'mail_subject_prefix', 'mail_subject_key',
-                     'custom_fields', 'g-recaptcha-response']
+                     'custom_fields'] + list(captcha.FIELDS)
     if exclude:
         hidden_fields += list(exclude)
     # Contact information goes at the top

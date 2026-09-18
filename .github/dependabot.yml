@@ -14,6 +14,10 @@ updates:
       # until a Sphinx release supports it (sphinx-doc/sphinx#14455).
       - dependency-name: "docutils"
         versions: [">=0.23"]
+      # The altcha library and the browser widget share a challenge protocol
+      # that changes with the major version, so upgrade them together by hand.
+      - dependency-name: "altcha"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -9,7 +9,21 @@ DUPLICATE_CHECK_TIME = 3600  # seconds -- 60 seconds * 60 minutes
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # max upload size in bytes (10 MiB)
 HOST = "0.0.0.0"
 PORT = 5000
-RECAPTCHA_SECRET = os.environ['RECAPTCHA_SECRET']
+# Captcha providers; at least one secret is required. A submission may use any
+# provider configured here, so only set the ones your forms actually use.
+TURNSTILE_SECRET = os.environ.get('TURNSTILE_SECRET')  # Cloudflare Turnstile
+ALTCHA_HMAC_KEY = os.environ.get('ALTCHA_HMAC_KEY')  # ALTCHA (self-hosted)
+RECAPTCHA_SECRET = os.environ.get('RECAPTCHA_SECRET')  # Google reCAPTCHA
+# X-Forwarded-For hops to trust. 0 unless Formsender runs behind a proxy;
+# without it the captcha verifier is told the proxy's IP, not the sender's.
+TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT') or 0)
+# Comma-separated hostnames a Turnstile/reCAPTCHA token must have been solved
+# on, e.g. "osuosl.org,www.osuosl.org". Unset disables the check.
+CAPTCHA_ALLOWED_HOSTNAMES = os.environ.get('CAPTCHA_ALLOWED_HOSTNAMES')
+RECAPTCHA_MIN_SCORE = 0.5  # only applies to reCAPTCHA v3 keys (0.0 - 1.0)
+ALTCHA_ALGORITHM = 'PBKDF2/SHA-256'  # proof-of-work key derivation function
+ALTCHA_COST = 5000  # KDF iterations per attempt; raise to make bots work harder
+ALTCHA_EXPIRES = 600  # seconds a challenge stays redeemable
 URL = os.environ.get('RT_URL', "https://support.osuosl.org/REST/2.0/")
 RT_TOKEN = os.environ['RT_TOKEN']
 SENTRY_URI = os.environ.get('SENTRY_URI')

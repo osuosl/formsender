@@ -23,8 +23,11 @@ Error Number   Error Message               Cause
 3              Improper Form Submission    Honeypot was not empty, token was invalid, or fields_to_join referenced a missing field
 4              Too Many Requests           Number of submissions violated CEILING variable from conf.py
 5              Duplicate Request           This request is a duplicate of an earlier request
-6              Invalid Recaptcha           The reCAPTCHA response failed verification
+6              Invalid Captcha             The captcha response was missing or failed verification
 ============   ========================    =============================================================
+
+The captcha is checked before the duplicate check, so a submission rejected
+with error 6 can be corrected and sent again without tripping error 5.
 
 Two further error conditions are not returned as redirect error codes: a request
 body larger than ``MAX_CONTENT_LENGTH`` is rejected with an HTTP ``413`` error,
@@ -86,4 +89,4 @@ logged at ``DEBUG``:
   WARNING formsender: received Invalid Email: <submission-email> from <submission-email>
   WARNING formsender: received Invalid Name:  from <submission-email>
   WARNING formsender: received Improper Form Submission: <submission-name> from <submission-email>
-  WARNING formsender: received Invalid Recaptcha: <submission-name> from <submission-email>
+  WARNING formsender: received Invalid Captcha: <submission-name> from <submission-email>

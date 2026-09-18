@@ -10,8 +10,9 @@ REST2 API.
 
 Features:
 
-* Honeypot, shared-token, rate-limit, duplicate-detection, and reCAPTCHA checks
-  to filter out spam and abuse.
+* Honeypot, shared-token, rate-limit, duplicate-detection, and captcha checks
+  to filter out spam and abuse. Captcha backends: Cloudflare Turnstile,
+  self-hosted ALTCHA (proof of work, no third party), or Google reCAPTCHA.
 * File uploads are attached to the ticket.
 * Form fields can be mapped to RT custom fields.
 * A single image can serve multiple RT instances (one container per instance)
@@ -24,7 +25,8 @@ The file `conf.py.dist` reads its settings from environment variables. Copy it
 to `conf.py` (`cp conf.py.dist conf.py`) and supply the environment variables
 described in the [usage documentation]
 (http://formsender.readthedocs.org/en/latest/usage.html). At minimum you must
-set `TOKEN`, `RECAPTCHA_SECRET`, and `RT_TOKEN`.
+set `TOKEN`, `RT_TOKEN`, and the secret for at least one captcha provider
+(`TURNSTILE_SECRET`, `ALTCHA_HMAC_KEY`, or `RECAPTCHA_SECRET`).
 
 Deploy
 ------
@@ -36,7 +38,7 @@ Registry at `ghcr.io/osuosl/formsender`. The image runs the app under Gunicorn
 ```
 docker run -p 5000:5000 \
   -e TOKEN=... \
-  -e RECAPTCHA_SECRET=... \
+  -e TURNSTILE_SECRET=... \
   -e RT_TOKEN=... \
   -e RT_URL=https://support.example.org/REST/2.0/ \
   ghcr.io/osuosl/formsender:master

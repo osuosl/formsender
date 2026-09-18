@@ -26,4 +26,5 @@ coverage:
 
 flake:
 	      flake8 request_handler.py
+	      flake8 captcha.py
 	      flake8 tests.py
