@@ -8,7 +8,8 @@ tickets. When a form is POSTed to it, Formsender:
 
 #. Validates the submission and screens it for spam and abuse (a hidden honeypot
    field, a shared token, a per-second rate limit, duplicate detection, and a
-   reCAPTCHA check).
+   captcha check via Cloudflare Turnstile, self-hosted ALTCHA, or Google
+   reCAPTCHA).
 #. Formats the submitted fields into a readable ticket body.
 #. Creates a ticket through the RT REST2 API, attaching any uploaded files and
    populating any RT custom fields the form declares.

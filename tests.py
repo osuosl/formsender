@@ -1,5 +1,7 @@
 import unittest
 import werkzeug
+import base64
+import json
 from io import BytesIO
 from datetime import datetime, timedelta
 from werkzeug.wrappers import Request
@@ -9,7 +11,21 @@ from mock import Mock, patch
 import conf
 import time
 import request_handler as handler
+import captcha
+import altcha
 import rt
+
+
+def setUpModule():
+    """Give every test a configured captcha provider"""
+    # conf.py reads these from the environment, so a developer running the
+    # suite without them set would otherwise hit the startup check.
+    for name, value in (('TURNSTILE_SECRET', 'test-turnstile-secret'),
+                        ('ALTCHA_HMAC_KEY', 'test-altcha-key'),
+                        ('RECAPTCHA_SECRET', 'test-recaptcha-secret'),
+                        ('CAPTCHA_ALLOWED_HOSTNAMES', None),
+                        ('TRUSTED_PROXY_COUNT', 0)):
+        setattr(conf, name, value)
 
 
 class TestFormsender(unittest.TestCase):
@@ -161,7 +177,7 @@ class TestFormsender(unittest.TestCase):
         self.assertNotIn('OPF', body)
         self.assertIn('hello', body)
 
-    @patch('request_handler.is_valid_recaptcha')
+    @patch('captcha.is_valid_captcha')
     @patch('request_handler.validate_email')
     def test_validations_valid_data(self, mock_validate_email,
                                     mock_recaptcha):
@@ -182,7 +198,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         # Mock external services so they return valid in CI
         mock_validate_email.return_value = True
-        mock_recaptcha.return_value = True
+        mock_recaptcha.return_value = (True, 'test')
         app = handler.create_app()
         # Mock create_ticket function so it doesn't send an actual ticket
         rt.rest2.Rt = Mock('rt.rest2.Rt')
@@ -409,7 +425,7 @@ class TestFormsender(unittest.TestCase):
         req = Request(env)
         self.assertFalse(handler.is_valid_token(req))
 
-    @patch('request_handler.is_valid_recaptcha')
+    @patch('captcha.is_valid_captcha')
     @patch('request_handler.validate_email')
     def test_rate_limiter_valid_rate(self, mock_validate_email,
                                      mock_recaptcha):
@@ -425,7 +441,7 @@ class TestFormsender(unittest.TestCase):
                                        'g-recaptcha-response': ''})
         # Mock external services so they return valid in CI
         mock_validate_email.return_value = True
-        mock_recaptcha.return_value = True
+        mock_recaptcha.return_value = (True, 'test')
         # Mock create_ticket function so it doesn't send an actual ticket
         rt.rest2.Rt = Mock('rt.rest2.Rt')
         app = handler.create_app()
@@ -465,7 +481,7 @@ class TestFormsender(unittest.TestCase):
 
         self.assertEqual(app.error, 'Too Many Requests')
 
-    @patch('request_handler.is_valid_recaptcha')
+    @patch('captcha.is_valid_captcha')
     @patch('request_handler.validate_email')
     def test_redirect_url_valid_data(self, mock_validate_email,
                                      mock_recaptcha):
@@ -486,7 +502,7 @@ class TestFormsender(unittest.TestCase):
 
         # Mock external services so they return valid in CI
         mock_validate_email.return_value = True
-        mock_recaptcha.return_value = True
+        mock_recaptcha.return_value = (True, 'test')
 
         # Create app and mock redirect
         app = handler.create_app()
@@ -863,7 +879,7 @@ class TestFormsender(unittest.TestCase):
         address = handler.send_to_address(message)
         self.assertEqual(address, 'OSLSupport')
 
-    @patch('request_handler.is_valid_recaptcha')
+    @patch('captcha.is_valid_captcha')
     @patch('request_handler.validate_email')
     def test_same_submission(self, mock_validate_email, mock_recaptcha):
         """
@@ -882,7 +898,7 @@ class TestFormsender(unittest.TestCase):
         # Mock create_ticket function so it doesn't send an actual ticket
         rt.rest2.Rt.create_ticket = Mock('rt.rest2.Rt.create_ticket')
         mock_validate_email.return_value = True
-        mock_recaptcha.return_value = True
+        mock_recaptcha.return_value = (True, 'test')
 
         # Create apps
         app = handler.create_app()
@@ -1177,6 +1193,606 @@ class TestFormsender(unittest.TestCase):
             - timedelta(seconds=conf.DUPLICATE_CHECK_TIME + 1))
         self.assertFalse(controller.is_duplicate('whatever'))
         self.assertEqual(controller.hash_list, [])
+
+
+class TestCaptcha(unittest.TestCase):
+    """
+    Tests the pluggable captcha backends in captcha.py and the pieces of the
+    request handler that use them.
+    """
+
+    KEY = 'unit-test-altcha-key'
+
+    def setUp(self):
+        # Every provider configured unless a test says otherwise
+        self.settings = patch.multiple(conf, TURNSTILE_SECRET='ts-secret',
+                                       ALTCHA_HMAC_KEY=self.KEY,
+                                       RECAPTCHA_SECRET='rc-secret',
+                                       CAPTCHA_ALLOWED_HOSTNAMES=None,
+                                       ALTCHA_ALGORITHM='SHA-256',
+                                       ALTCHA_COST=1, ALTCHA_EXPIRES=600,
+                                       RECAPTCHA_MIN_SCORE=0.5, create=True)
+        self.settings.start()
+        self.addCleanup(self.settings.stop)
+        self.controller = handler.Controller()
+
+    @staticmethod
+    def request(**fields):
+        builder = EnvironBuilder(method='POST', data=fields,
+                                 environ_base={'REMOTE_ADDR': '203.0.113.5'})
+        return Request(builder.get_environ())
+
+    @staticmethod
+    def siteverify(body, status=200):
+        """A fake requests.post returning the given JSON body"""
+        response = Mock()
+        response.json.return_value = body
+        if status >= 400:
+            response.raise_for_status.side_effect = \
+                handler.captcha.requests.HTTPError(str(status))
+        return Mock(return_value=response)
+
+    def solved_payload(self, **challenge_kwargs):
+        """A solved ALTCHA payload for a challenge issued with the test key"""
+        challenge_kwargs.setdefault('expires_at', int(time.time()) + 60)
+        challenge_kwargs.setdefault('hmac_secret', self.KEY)
+        challenge = altcha.create_challenge('SHA-256', 1, **challenge_kwargs)
+        solution = altcha.solve_challenge(challenge)
+        return altcha.Payload(challenge, solution).to_base64()
+
+    # Provider selection
+
+    def test_no_captcha_field_is_rejected(self):
+        valid, provider = captcha.is_valid_captcha(self.request(name='x'),
+                                                   self.controller)
+        self.assertEqual((valid, provider), (False, None))
+
+    def test_empty_captcha_field_is_rejected(self):
+        req = self.request(**{'cf-turnstile-response': ''})
+        self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                         (False, None))
+
+    def test_unconfigured_provider_is_rejected(self):
+        with patch.object(conf, 'TURNSTILE_SECRET', None):
+            with patch('captcha.session.post') as post:
+                req = self.request(**{'cf-turnstile-response': 'tok'})
+                self.assertEqual(captcha.is_valid_captcha(req,
+                                                          self.controller),
+                                 (False, 'turnstile'))
+                post.assert_not_called()
+
+    def test_configured_providers(self):
+        self.assertEqual(captcha.configured_providers(),
+                         ['turnstile', 'altcha', 'recaptcha'])
+        with patch.multiple(conf, TURNSTILE_SECRET=None,
+                            RECAPTCHA_SECRET=''):
+            self.assertEqual(captcha.configured_providers(), ['altcha'])
+
+    def test_create_app_requires_a_provider(self):
+        with patch.multiple(conf, TURNSTILE_SECRET=None, ALTCHA_HMAC_KEY=None,
+                            RECAPTCHA_SECRET=None):
+            with self.assertRaises(RuntimeError):
+                handler.create_app()
+
+    # Turnstile
+
+    def test_turnstile_success(self):
+        post = self.siteverify({'success': True, 'hostname': 'osuosl.org'})
+        with patch('captcha.session.post', post):
+            req = self.request(**{'cf-turnstile-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (True, 'turnstile'))
+        post.assert_called_once()
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], captcha.TURNSTILE_VERIFY_URL)
+        self.assertEqual(kwargs['data']['secret'], 'ts-secret')
+        self.assertEqual(kwargs['data']['response'], 'tok')
+        self.assertEqual(kwargs['data']['remoteip'], req.remote_addr)
+        self.assertEqual(kwargs['timeout'], captcha.VERIFY_TIMEOUT)
+
+    def test_turnstile_failure(self):
+        post = self.siteverify({'success': False,
+                                'error-codes': ['invalid-input-response']})
+        with patch('captcha.session.post', post):
+            req = self.request(**{'cf-turnstile-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'turnstile'))
+
+    def test_turnstile_network_error_fails_closed(self):
+        post = Mock(side_effect=captcha.requests.ConnectionError('down'))
+        with patch('captcha.session.post', post):
+            req = self.request(**{'cf-turnstile-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'turnstile'))
+
+    def test_turnstile_http_error_fails_closed(self):
+        post = self.siteverify({}, status=500)
+        with patch('captcha.session.post', post):
+            req = self.request(**{'cf-turnstile-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'turnstile'))
+
+    def test_hostname_allowlist(self):
+        req = self.request(**{'cf-turnstile-response': 'tok'})
+        with patch.object(conf, 'CAPTCHA_ALLOWED_HOSTNAMES',
+                          'osuosl.org, www.osuosl.org'):
+            post = self.siteverify({'success': True,
+                                    'hostname': 'WWW.osuosl.org'})
+            with patch('captcha.session.post', post):
+                self.assertTrue(captcha.is_valid_captcha(req,
+                                                         self.controller)[0])
+            post = self.siteverify({'success': True,
+                                    'hostname': 'evil.example'})
+            with patch('captcha.session.post', post):
+                self.assertFalse(captcha.is_valid_captcha(req,
+                                                          self.controller)[0])
+            post = self.siteverify({'success': True})
+            with patch('captcha.session.post', post):
+                self.assertFalse(captcha.is_valid_captcha(req,
+                                                          self.controller)[0])
+
+    # reCAPTCHA
+
+    def test_recaptcha_success(self):
+        post = self.siteverify({'success': True})
+        with patch('captcha.session.post', post):
+            req = self.request(**{'g-recaptcha-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (True, 'recaptcha'))
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], captcha.RECAPTCHA_VERIFY_URL)
+        self.assertEqual(kwargs['data']['secret'], 'rc-secret')
+
+    def test_recaptcha_v3_score_threshold(self):
+        req = self.request(**{'g-recaptcha-response': 'tok'})
+        with patch('captcha.session.post',
+                   self.siteverify({'success': True, 'score': 0.3})):
+            self.assertFalse(captcha.is_valid_captcha(req,
+                                                      self.controller)[0])
+        with patch('captcha.session.post',
+                   self.siteverify({'success': True, 'score': 0.9})):
+            self.assertTrue(captcha.is_valid_captcha(req,
+                                                     self.controller)[0])
+
+    def test_recaptcha_failure(self):
+        with patch('captcha.session.post',
+                   self.siteverify({'success': False})):
+            req = self.request(**{'g-recaptcha-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'recaptcha'))
+
+    # ALTCHA
+
+    def test_altcha_round_trip(self):
+        req = self.request(altcha=self.solved_payload())
+        self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                         (True, 'altcha'))
+
+    def test_altcha_replay_is_rejected(self):
+        payload = self.solved_payload()
+        req = self.request(altcha=payload)
+        self.assertTrue(captcha.is_valid_captcha(req, self.controller)[0])
+        # A challenge is only spent once the submission produced a ticket
+        self.controller.commit_challenge()
+        # Same challenge again, even in a different submission
+        req = self.request(altcha=payload, name='someone else')
+        self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                         (False, 'altcha'))
+        # A fresh challenge is still fine
+        req = self.request(altcha=self.solved_payload())
+        self.assertTrue(captcha.is_valid_captcha(req, self.controller)[0])
+
+    def test_altcha_expired_is_rejected(self):
+        payload = self.solved_payload(expires_at=int(time.time()) - 1)
+        req = self.request(altcha=payload)
+        self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                         (False, 'altcha'))
+
+    def test_altcha_no_expiry_is_rejected(self):
+        payload = self.solved_payload(expires_at=None)
+        req = self.request(altcha=payload)
+        self.assertFalse(captcha.is_valid_captcha(req, self.controller)[0])
+
+    def test_altcha_wrong_key_is_rejected(self):
+        payload = self.solved_payload(hmac_secret='someone-elses-key')
+        req = self.request(altcha=payload)
+        self.assertFalse(captcha.is_valid_captcha(req, self.controller)[0])
+
+    def test_altcha_malformed_payload_is_rejected(self):
+        for payload in ('garbage!', 'e30=', 'W10='):
+            req = self.request(altcha=payload)
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'altcha'))
+
+    def test_controller_forgets_expired_challenges(self):
+        self.assertFalse(self.controller.is_replayed_challenge(
+            'old', time.time() - 1))
+        self.controller.commit_challenge()
+        self.assertFalse(self.controller.is_replayed_challenge(
+            'new', time.time() + 60))
+        self.controller.commit_challenge()
+        self.assertNotIn('old', self.controller.seen_challenges)
+        self.assertTrue(self.controller.is_replayed_challenge(
+            'new', time.time() + 60))
+
+    def test_altcha_challenge_endpoint(self):
+        client = Client(handler.create_app())
+        resp = client.get('/altcha')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.mimetype, 'application/json')
+        self.assertEqual(resp.headers['Access-Control-Allow-Origin'], '*')
+        self.assertEqual(resp.headers['Cache-Control'], 'no-store')
+        body = resp.get_json()
+        self.assertIn('signature', body)
+        self.assertEqual(body['parameters']['algorithm'], 'SHA-256')
+        self.assertGreater(body['parameters']['expiresAt'], time.time())
+        # Issued challenges verify with the configured key
+        challenge = altcha.Challenge.from_dict(body)
+        solution = altcha.solve_challenge(challenge)
+        payload = altcha.Payload(challenge, solution).to_base64()
+        self.assertTrue(altcha.verify_solution(payload, self.KEY).verified)
+        # Two challenges are never the same
+        self.assertNotEqual(body['parameters']['nonce'],
+                            client.get('/altcha').get_json()
+                            ['parameters']['nonce'])
+
+    def test_altcha_challenge_endpoint_options_and_unconfigured(self):
+        client = Client(handler.create_app())
+        resp = client.options('/altcha')
+        self.assertEqual(resp.status_code, 204)
+        self.assertEqual(resp.headers['Access-Control-Allow-Origin'], '*')
+        self.assertEqual(client.post('/altcha').status_code, 405)
+        with patch.object(conf, 'ALTCHA_HMAC_KEY', None):
+            self.assertEqual(client.get('/altcha').status_code, 404)
+
+    # Request handler integration
+
+    @patch('request_handler.validate_email')
+    def test_form_page_rejects_bad_captcha_with_error_6(self,
+                                                        mock_validate_email):
+        mock_validate_email.return_value = True
+        req = self.request(name='Valid Guy', email='example@osuosl.org',
+                           last_name='', token=conf.TOKEN,
+                           redirect='http://www.example.com',
+                           altcha='garbage!')
+        app = handler.create_app()
+        with patch('werkzeug.utils.redirect') as redirect:
+            app.on_form_page(req)
+        self.assertEqual(app.error, 'Invalid Captcha')
+        redirect.assert_called_with(
+            'http://www.example.com?error=6&message=Invalid+Captcha',
+            code=302)
+
+    @patch('request_handler.validate_email')
+    def test_form_page_accepts_altcha_end_to_end(self, mock_validate_email):
+        mock_validate_email.return_value = True
+        req = self.request(name='Valid Guy', email='example@osuosl.org',
+                           last_name='', token=conf.TOKEN,
+                           redirect='http://www.example.com',
+                           altcha=self.solved_payload())
+        app = handler.create_app()
+        with patch('request_handler.send_ticket') as send_ticket:
+            with patch('werkzeug.utils.redirect') as redirect:
+                app.on_form_page(req)
+        self.assertEqual(app.error, None)
+        send_ticket.assert_called_once()
+        body = send_ticket.call_args[0][0]
+        self.assertNotIn('Altcha', body)
+        self.assertNotIn(req.form['altcha'], body)
+        redirect.assert_called_with('http://www.example.com', code=302)
+
+    def test_dedup_message_ignores_captcha_fields(self):
+        first = self.request(name='x', email='a@b.co', redirect='r',
+                             **{'cf-turnstile-response': 'token-1'})
+        second = self.request(name='x', email='a@b.co', redirect='r',
+                              altcha='token-2')
+        self.assertEqual(handler.dedup_message(first),
+                         handler.dedup_message(second))
+        # The hash is taken over the string form, so field order must not
+        # change the identity of a submission
+        reordered = self.request(**{'redirect': 'r', 'email': 'a@b.co',
+                                    'altcha': 'token-3', 'name': 'x'})
+        self.assertEqual(str(handler.dedup_message(first)),
+                         str(handler.dedup_message(reordered)))
+        self.assertFalse(self.controller.is_duplicate(
+            handler.dedup_message(first)))
+        self.assertTrue(self.controller.is_duplicate(
+            handler.dedup_message(second)))
+
+    def test_format_message_hides_all_captcha_fields(self):
+        msg = {'name': 'n', 'email': 'e', 'redirect': 'r', 'topic': 'hi',
+               'cf-turnstile-response': 'TURNSTILE-TOKEN',
+               'altcha': 'ALTCHA-TOKEN',
+               'g-recaptcha-response': 'RECAPTCHA-TOKEN'}
+        body = handler.format_message(msg)
+        self.assertIn('hi', body)
+        for field in captcha.FIELDS:
+            # format_message title-cases keys, so check both spellings and
+            # the value, which is what must never reach a ticket
+            self.assertNotIn(field, body)
+            self.assertNotIn(handler.convert_key_to_title(field), body)
+            self.assertNotIn(msg[field], body)
+
+
+class TestCaptchaHardening(unittest.TestCase):
+    """
+    Tests that each rejection path fails closed rather than raising, and that
+    the settings that gate them are validated.
+    """
+
+    KEY = 'unit-test-altcha-key'
+
+    def setUp(self):
+        self.settings = patch.multiple(conf, TURNSTILE_SECRET='ts-secret',
+                                       ALTCHA_HMAC_KEY=self.KEY,
+                                       RECAPTCHA_SECRET='rc-secret',
+                                       CAPTCHA_ALLOWED_HOSTNAMES=None,
+                                       ALTCHA_ALGORITHM='SHA-256',
+                                       ALTCHA_COST=1, ALTCHA_EXPIRES=600,
+                                       RECAPTCHA_MIN_SCORE=0.5,
+                                       TRUSTED_PROXY_COUNT=0, create=True)
+        self.settings.start()
+        self.addCleanup(self.settings.stop)
+        self.controller = handler.Controller()
+
+    @staticmethod
+    def request(**fields):
+        builder = EnvironBuilder(method='POST', data=fields,
+                                 environ_base={'REMOTE_ADDR': '203.0.113.5'})
+        return Request(builder.get_environ())
+
+    @staticmethod
+    def json_response(body):
+        response = Mock()
+        response.json.return_value = body
+        return Mock(return_value=response)
+
+    def altcha_payload(self, **parameters):
+        """A solved payload whose challenge parameters can be overridden"""
+        challenge = altcha.create_challenge('SHA-256', 1, hmac_secret=self.KEY,
+                                            expires_at=int(time.time()) + 60)
+        payload = altcha.Payload(challenge, altcha.solve_challenge(challenge))
+        raw = payload.to_dict()
+        raw['challenge']['parameters'].update(parameters)
+        return base64.b64encode(json.dumps(raw).encode()).decode()
+
+    def test_altcha_rejects_wrongly_typed_fields(self):
+        """Attacker-chosen JSON types must not escape as a 500"""
+        for expires_at in ('9999999999', [1], {'a': 1}):
+            req = self.request(altcha=self.altcha_payload(
+                expiresAt=expires_at))
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'altcha'))
+
+    def test_altcha_rejects_wrongly_typed_counter(self):
+        payload = json.loads(base64.b64decode(self.altcha_payload()))
+        payload['solution']['counter'] = 2 ** 64
+        raw = base64.b64encode(json.dumps(payload).encode()).decode()
+        self.assertEqual(
+            captcha.is_valid_captcha(self.request(altcha=raw),
+                                     self.controller), (False, 'altcha'))
+
+    def test_siteverify_non_object_response_is_rejected(self):
+        """A proxy or error page that returns valid but scalar JSON"""
+        for body in ('blocked', 42, True, None, ['nope']):
+            with patch('captcha.session.post', self.json_response(body)):
+                req = self.request(**{'cf-turnstile-response': 'tok'})
+                self.assertEqual(
+                    captcha.is_valid_captcha(req, self.controller),
+                    (False, 'turnstile'))
+
+    def test_error_codes_alongside_success_are_rejected(self):
+        """reCAPTCHA fails open on quota: success true plus an error code"""
+        body = {'success': True, 'score': 0.9,
+                'error-codes': ['quota-exceeded']}
+        with patch('captcha.session.post', self.json_response(body)):
+            req = self.request(**{'g-recaptcha-response': 'tok'})
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (False, 'recaptcha'))
+
+    def test_unusable_score_is_rejected(self):
+        with patch('captcha.session.post',
+                   self.json_response({'success': True, 'score': 'high'})):
+            req = self.request(**{'g-recaptcha-response': 'tok'})
+            self.assertFalse(captcha.is_valid_captcha(req,
+                                                      self.controller)[0])
+
+    def test_unset_min_score_falls_back_to_the_default(self):
+        """A setting present but None must not be used as a threshold"""
+        with patch.object(conf, 'RECAPTCHA_MIN_SCORE', None):
+            with patch('captcha.session.post',
+                       self.json_response({'success': True, 'score': 0.9})):
+                req = self.request(**{'g-recaptcha-response': 'tok'})
+                self.assertTrue(captcha.is_valid_captcha(req,
+                                                         self.controller)[0])
+            with patch('captcha.session.post',
+                       self.json_response({'success': True, 'score': 0.1})):
+                req = self.request(**{'g-recaptcha-response': 'tok'})
+                self.assertFalse(captcha.is_valid_captcha(req,
+                                                          self.controller)[0])
+
+    def test_empty_hostname_allowlist_is_a_configuration_error(self):
+        """A typo must not silently switch the check off"""
+        for raw in (' , ', ',', '   '):
+            with patch.object(conf, 'CAPTCHA_ALLOWED_HOSTNAMES', raw):
+                with self.assertRaises(RuntimeError):
+                    captcha.check_configuration()
+                with self.assertRaises(RuntimeError):
+                    handler.create_app()
+
+    def test_unknown_altcha_algorithm_is_a_configuration_error(self):
+        """The library falls back to plain SHA for anything it knows not"""
+        for algorithm in ('nonsense', 'PBKDF2/SHA256', 'SCRYPT', 'ARGON2ID'):
+            with patch.object(conf, 'ALTCHA_ALGORITHM', algorithm):
+                with self.assertRaises(RuntimeError):
+                    handler.create_app()
+        with patch.object(conf, 'ALTCHA_ALGORITHM', 'PBKDF2/SHA-512'):
+            self.assertEqual(captcha.altcha_algorithm(), 'PBKDF2/SHA-512')
+
+    def test_configured_providers_are_logged_at_startup(self):
+        with patch.object(handler.logging.getLogger('formsender'),
+                          'info') as info:
+            handler.create_app()
+        self.assertIn('turnstile, altcha, recaptcha', info.call_args[0][1])
+
+    def test_create_app_does_not_stack_log_handlers(self):
+        logger = handler.logging.getLogger('formsender')
+        before = len(logger.handlers)
+        handler.create_app()
+        handler.create_app()
+        self.assertEqual(len(logger.handlers), before)
+
+    # Request handling
+
+    def test_failed_captcha_does_not_block_a_retry(self):
+        """A rejected submission must not register as a duplicate"""
+        fields = dict(name='Valid Guy', email='example@osuosl.org',
+                      last_name='', token=conf.TOKEN,
+                      redirect='http://www.example.com')
+        app = handler.create_app()
+        with patch('request_handler.validate_email', return_value=True):
+            app.on_form_page(self.request(altcha='garbage!', **fields))
+            self.assertEqual(app.error, 'Invalid Captcha')
+            # Same body, this time with a captcha the user actually solved
+            payload = self.altcha_payload()
+            with patch('request_handler.send_ticket'):
+                with patch('werkzeug.utils.redirect'):
+                    app.on_form_page(self.request(altcha=payload, **fields))
+        self.assertEqual(app.error, None)
+
+    def test_duplicate_is_still_caught_after_a_valid_captcha(self):
+        fields = dict(name='Valid Guy', email='example@osuosl.org',
+                      last_name='', token=conf.TOKEN,
+                      redirect='http://www.example.com')
+        app = handler.create_app()
+        with patch('request_handler.validate_email', return_value=True):
+            with patch('captcha.is_valid_captcha',
+                       return_value=(True, 'test')):
+                with patch('request_handler.send_ticket'):
+                    with patch('werkzeug.utils.redirect'):
+                        app.on_form_page(self.request(**fields))
+                        self.assertEqual(app.error, None)
+                        app.on_form_page(self.request(**fields))
+        self.assertEqual(app.error, 'Duplicate Request')
+
+    def test_challenge_endpoint_accepts_head_and_limits_rate(self):
+        client = Client(handler.create_app())
+        self.assertEqual(client.head('/altcha').status_code, 200)
+        for _ in range(conf.CEILING):
+            client.get('/altcha')
+        self.assertEqual(client.get('/altcha').status_code, 429)
+
+    def test_forwarded_for_is_used_when_proxies_are_trusted(self):
+        """Behind haproxy REMOTE_ADDR is the proxy, which is useless here"""
+        post = self.json_response({'success': True})
+        with patch.object(conf, 'TRUSTED_PROXY_COUNT', 1):
+            client = Client(handler.create_app())
+            with patch('captcha.session.post', post), \
+                    patch('request_handler.send_ticket'), \
+                    patch('request_handler.validate_email',
+                          return_value=True):
+                client.post('/', data={'name': 'x',
+                                       'email': 'example@osuosl.org',
+                                       'last_name': '', 'token': conf.TOKEN,
+                                       'redirect': 'http://example.com',
+                                       'cf-turnstile-response': 'tok'},
+                            headers={'X-Forwarded-For': '198.51.100.7'},
+                            environ_base={'REMOTE_ADDR': '140.211.9.50'})
+        self.assertEqual(post.call_args[1]['data']['remoteip'],
+                         '198.51.100.7')
+
+    def test_remote_addr_is_used_without_a_trusted_proxy(self):
+        post = self.json_response({'success': True})
+        with patch('captcha.session.post', post):
+            captcha.is_valid_captcha(
+                self.request(**{'cf-turnstile-response': 'tok'}),
+                self.controller)
+        self.assertEqual(post.call_args[1]['data']['remoteip'], '203.0.113.5')
+
+    def test_redeemed_challenges_do_not_grow_without_bound(self):
+        expiry = time.time() + 600
+        for index in range(handler.MAX_SEEN_CHALLENGES):
+            self.controller.is_replayed_challenge('nonce-%d' % index, expiry)
+            self.controller.commit_challenge()
+        self.assertEqual(len(self.controller.seen_challenges),
+                         handler.MAX_SEEN_CHALLENGES)
+        self.controller.is_replayed_challenge('one-more', expiry)
+        self.controller.commit_challenge()
+        self.assertLess(len(self.controller.seen_challenges),
+                        handler.MAX_SEEN_CHALLENGES)
+
+    def test_captcha_payload_is_not_logged_with_the_submission(self):
+        app = handler.create_app()
+        payload = self.altcha_payload()
+        req = self.request(name='Valid Guy', email='example@osuosl.org',
+                           last_name='', token=conf.TOKEN,
+                           redirect='http://www.example.com', altcha=payload)
+        with patch.object(app, 'logger') as logger:
+            with patch('request_handler.validate_email', return_value=True):
+                with patch('request_handler.send_ticket'):
+                    with patch('werkzeug.utils.redirect'):
+                        app.on_form_page(req)
+        logged = ' '.join(str(call) for call in logger.debug.call_args_list)
+        self.assertIn('Valid Guy', logged)
+        self.assertNotIn(payload, logged)
+
+    def test_issued_challenge_verifies_with_the_shipped_defaults(self):
+        """The mint and verify paths must agree on the real conf.py values"""
+        defaults = patch.multiple(conf, ALTCHA_ALGORITHM='PBKDF2/SHA-256',
+                                  ALTCHA_COST=5000, ALTCHA_EXPIRES=600)
+        with defaults:
+            client = Client(handler.create_app())
+            body = client.get('/altcha').get_json()
+            self.assertEqual(body['parameters']['algorithm'],
+                             'PBKDF2/SHA-256')
+            challenge = altcha.Challenge.from_dict(body)
+            solution = altcha.solve_challenge(challenge)
+            self.assertIsNotNone(solution)
+            payload = altcha.Payload(challenge, solution).to_base64()
+            req = self.request(altcha=payload)
+            self.assertEqual(captcha.is_valid_captcha(req, self.controller),
+                             (True, 'altcha'))
+
+    def test_challenge_survives_a_failure_after_the_captcha_check(self):
+        """An RT outage must not burn the sender's solved challenge"""
+        fields = dict(name='Persistent', email='p@osuosl.org', last_name='',
+                      token=conf.TOKEN, redirect='http://www.example.com')
+        payload = self.altcha_payload()
+        app = handler.create_app()
+        with patch('request_handler.validate_email', return_value=True):
+            with patch('request_handler.send_ticket',
+                       side_effect=RuntimeError('RT down')):
+                with self.assertRaises(RuntimeError):
+                    app.on_form_page(self.request(altcha=payload, **fields))
+            # Same page, same solved challenge, RT back
+            with patch('request_handler.send_ticket') as send_ticket:
+                with patch('werkzeug.utils.redirect'):
+                    app.on_form_page(self.request(altcha=payload,
+                                                  name='Persistent Two',
+                                                  email='p@osuosl.org',
+                                                  last_name='',
+                                                  token=conf.TOKEN,
+                                                  redirect='http://e.com'))
+        self.assertEqual(app.error, None)
+        send_ticket.assert_called_once()
+
+    def test_a_challenge_is_spent_once_a_ticket_exists(self):
+        fields = dict(name='Spender', email='s@osuosl.org', last_name='',
+                      token=conf.TOKEN, redirect='http://www.example.com')
+        payload = self.altcha_payload()
+        app = handler.create_app()
+        with patch('request_handler.validate_email', return_value=True):
+            with patch('request_handler.send_ticket'):
+                with patch('werkzeug.utils.redirect'):
+                    app.on_form_page(self.request(altcha=payload, **fields))
+                    self.assertEqual(app.error, None)
+                    app.on_form_page(self.request(altcha=payload,
+                                                  name='Spender Two',
+                                                  email='s@osuosl.org',
+                                                  last_name='',
+                                                  token=conf.TOKEN,
+                                                  redirect='http://e.com'))
+        self.assertEqual(app.error, 'Invalid Captcha')
 
 
 if __name__ == '__main__':

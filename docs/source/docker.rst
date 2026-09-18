@@ -20,15 +20,23 @@ the latest image:
    $ docker pull ghcr.io/osuosl/formsender:master
    $ docker run -p 5000:5000 \
        -e TOKEN=s0m3T0k3n \
-       -e RECAPTCHA_SECRET=your-recaptcha-secret \
+       -e TURNSTILE_SECRET=your-turnstile-secret \
        -e RT_TOKEN=your-rt-token \
        -e RT_URL=https://support.example.org/REST/2.0/ \
        ghcr.io/osuosl/formsender:master
 
-``TOKEN``, ``RECAPTCHA_SECRET``, and ``RT_TOKEN`` are required. ``RT_URL`` is
+``TOKEN``, ``RT_TOKEN``, and at least one captcha secret (``TURNSTILE_SECRET``,
+``ALTCHA_HMAC_KEY`` or ``RECAPTCHA_SECRET``) are required. ``RT_URL`` is
 optional and defaults to ``https://support.osuosl.org/REST/2.0/``; set it to
-point a container at a different RT instance. ``SENTRY_URI`` is also optional.
+point a container at a different RT instance. ``SENTRY_URI``,
+``CAPTCHA_ALLOWED_HOSTNAMES`` and ``TRUSTED_PROXY_COUNT`` are also optional.
 See the :ref:`usage` documentation for the full list of settings.
+
+Two settings matter when more than one container serves the same site: set
+``TRUSTED_PROXY_COUNT=1`` behind a reverse proxy so the captcha provider sees
+the sender's IP address, and give every container the same
+``ALTCHA_HMAC_KEY``, because a container cannot verify a challenge another one
+signed.
 
 
 Build the Container
@@ -50,7 +58,7 @@ Run the image you just built the same way as the published one:
 
    $ docker run -p 5000:5000 \
        -e TOKEN=s0m3T0k3n \
-       -e RECAPTCHA_SECRET=your-recaptcha-secret \
+       -e TURNSTILE_SECRET=your-turnstile-secret \
        -e RT_TOKEN=your-rt-token \
        formsender
 

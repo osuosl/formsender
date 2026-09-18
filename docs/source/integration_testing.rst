@@ -31,8 +31,9 @@ of a failed integration:
    (case-sensitive).
 #. Any ``custom_fields`` the form declares must be **custom fields that exist in
    RT** and are applied to that queue.
-#. The form ``token`` must equal Formsender's ``TOKEN``, and the reCAPTCHA site
-   key in the form must pair with Formsender's ``RECAPTCHA_SECRET``.
+#. The form ``token`` must equal Formsender's ``TOKEN``, and the captcha widget
+   in the form must pair with the matching secret on Formsender (for example a
+   Turnstile site key with ``TURNSTILE_SECRET``).
 
 1. Stand up a test RT with osl-rt
 ---------------------------------
@@ -116,11 +117,16 @@ That value is Formsender's ``RT_TOKEN``. You can sanity-check it directly::
 ----------------------------------------
 
 Configure Formsender with the RT endpoint and token, a form token, and a
-reCAPTCHA secret. For local testing, use Google's official reCAPTCHA test
+captcha secret. For local testing, use the providers' official test
 credentials, which always validate as success:
 
-* site key (goes in the form): ``6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI``
-* secret (``RECAPTCHA_SECRET``): ``6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe``
+* Cloudflare Turnstile: site key (goes in the form) ``1x00000000000000000000AA``,
+  secret (``TURNSTILE_SECRET``) ``1x0000000000000000000000000000000AA``. The
+  test site key works on any hostname, including ``localhost``.
+* ALTCHA: no site key; set ``ALTCHA_HMAC_KEY`` to any random string and point
+  the widget's ``challenge`` at ``http://localhost:5000/altcha``.
+* Google reCAPTCHA: site key ``6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI``,
+  secret (``RECAPTCHA_SECRET``) ``6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe``.
 
 Run the container (or ``make run`` from a checkout):
 
@@ -128,7 +134,8 @@ Run the container (or ``make run`` from a checkout):
 
     $ docker run -p 5000:5000 \
         -e TOKEN=foo \
-        -e RECAPTCHA_SECRET=6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe \
+        -e TURNSTILE_SECRET=1x0000000000000000000000000000000AA \
+        -e ALTCHA_HMAC_KEY=$(openssl rand -hex 32) \
         -e RT_TOKEN=<RT_TOKEN> \
         -e RT_URL=http://<fqdn>/REST/2.0/ \
         ghcr.io/osuosl/formsender:master
@@ -157,10 +164,10 @@ openpower.foundation
 
 This site is already wired for a local Formsender in its development config
 (``config/development/params.toml``): ``forms.endpoint`` points at
-``http://localhost:5000``, ``forms.token`` is ``foo``, and ``forms.recaptcha_sitekey``
-is the Google test site key. Make sure Formsender's ``TOKEN`` matches
-``forms.token`` and its ``RECAPTCHA_SECRET`` is the matching test secret (above),
-then run Hugo in the development environment:
+``http://localhost:5000``, ``forms.token`` is ``foo``, and the captcha site key
+is the provider's test key. Make sure Formsender's ``TOKEN`` matches
+``forms.token`` and the matching test secret (above) is set, then run Hugo in
+the development environment:
 
 .. code-block:: none
 
@@ -173,11 +180,11 @@ will redirect to the ``redirect`` page (``/form-submitted/``) on success.
 osuosl.org website
 ~~~~~~~~~~~~~~~~~~
 
-The OSL site hardcodes the Formsender host, form token, and reCAPTCHA site key
+The OSL site hardcodes the Formsender host, form token, and captcha site key
 inline in each form (under ``content/services/*.md``). For local testing,
 temporarily repoint a form at your Formsender: change its ``action`` to
 ``http://localhost:5000``, set the hidden ``token`` to match Formsender's
-``TOKEN``, and use the reCAPTCHA test site key. Its ``send_to`` queues
+``TOKEN``, and use the captcha provider's test site key. Its ``send_to`` queues
 (``HostingRequests``, ``AARCH64-Hosting``, ``PowerDev``, ``PowerCI``,
 ``IBM-Z-CI``) must exist in the RT instance (step 1). Then run the site locally
 with ``hugo server`` and submit the form.
@@ -214,8 +221,9 @@ Common pitfalls
 * **Ticket create fails when custom fields are set.** A name in ``custom_fields``
   is not a custom field that exists in RT and is applied to the queue. Create and
   apply it first.
-* **"Invalid Recaptcha".** The form's site key and Formsender's
-  ``RECAPTCHA_SECRET`` are not a matching pair. Use the Google test pair above
-  for local testing.
+* **"Invalid Captcha".** The form's widget and Formsender's provider secret
+  are not a matching pair, or the provider's secret is not set on this
+  instance. Use the test credentials above for local testing. For ALTCHA, also
+  check that the widget's ``challenge`` URL points at this Formsender.
 * **413 on submit.** The upload exceeded ``MAX_CONTENT_LENGTH`` (default 10 MiB).
 
