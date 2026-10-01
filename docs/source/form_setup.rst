@@ -163,27 +163,53 @@ resulting ticket:
     gives the ticket body the form's own labels and order. The value is a JSON
     list of ``{"name": ..., "label": ...}`` objects in the order the fields
     appear on the form. Fields in the list are written first, in that order,
-    headed by their label. A label that ends in a question mark is used as is;
-    any other label gets a colon. Fields that aren't in the list, or every field
-    when ``field_labels`` is missing or not valid JSON, follow with title-cased
-    names in alphabetical order, as before. Fields submitted blank, labelled or
-    not, are left out of the body. This should be a hidden field.
+    headed by their label, with each answer indented under it. A label that
+    ends in a question mark is used as is; any other label gets a colon. Fields
+    that aren't in the list, or every field when ``field_labels`` is missing or
+    not valid JSON, follow with title-cased names in alphabetical order, as
+    before. Fields submitted blank, labelled or not, are left out of the body.
+    This should be a hidden field.
+
+    An object can also have these keys:
+
+    - ``section``: the titles of the sections the field sits under, outermost
+      first, such as ``["Collaboration tools", "GitLab"]``. A heading is written
+      wherever the section changes. A top-level section is underlined with
+      ``=``; one inside it is set off with dashes.
+    - ``opens_section``: ``true`` for a checkbox that opens its own section,
+      such as a service the requester chose. Its section's heading shows it was
+      chosen, so its value isn't written.
+    - ``group``: the question a checkbox belongs to. Chosen checkboxes in a row
+      with the same group are listed under that question.
 
     .. code-block:: html
 
       <input type="hidden" name="field_labels"
-             value='[{"name": "instance_vcpus", "label": "vCPUs"},
-                     {"name": "current_hosting", "label": "Where are you hosted today?"}]' />
+             value='[{"name": "current_hosting", "label": "Where are you hosted today?"},
+                     {"name": "vm", "label": "Virtual machines", "section": ["Virtual machines"],
+                      "opens_section": true},
+                     {"name": "instance_vcpus", "label": "vCPUs", "section": ["Virtual machines"]},
+                     {"name": "arch_x86", "label": "x86_64", "group": "Architectures",
+                      "section": ["Virtual machines"]},
+                     {"name": "arch_arm", "label": "aarch64", "group": "Architectures",
+                      "section": ["Virtual machines"]}]' />
 
     result section of the ticket body:
 
     .. code-block:: html
 
-      vCPUs:
-      8
-
       Where are you hosted today?
-      A VPS
+          A VPS
+
+      Virtual machines
+      ================
+
+      vCPUs:
+          8
+
+      Architectures:
+        - x86_64
+        - aarch64
 
 * **fields_to_join**
 

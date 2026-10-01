@@ -545,13 +545,37 @@ def format_message(msg, exclude=None):
         msg.pop('fields_to_join', None)
 
     # Fields the form labelled come first, in form order, headed by the
-    # label the requester saw. Questions left blank are left out.
+    # label the requester saw and under the sections the form put them in.
+    # Questions left blank are left out.
     written = set()
-    for key, label in labels:
-        if key in msg and key.lower() not in hidden_fields and key not in written:
-            written.add(key)
-            if is_answered(msg[key]):
-                f_message += '{}\n{}\n\n'.format(label_heading(label), msg[key])
+    blocks = []
+    section = ()
+    group = None
+    for entry in labels:
+        key = entry['name']
+        if key not in msg or key.lower() in hidden_fields or key in written:
+            continue
+        written.add(key)
+        if not is_answered(msg[key]):
+            continue
+        if entry['section'] != section:
+            blocks += section_headings(section, entry['section'])
+            section = entry['section']
+            group = None
+        if entry['opens_section']:
+            # A chosen service: its heading says it was requested
+            continue
+        if entry['group']:
+            # Chosen checkbox-group options, listed under the group's label
+            if entry['group'] != group:
+                blocks.append(label_heading(entry['group']))
+                group = entry['group']
+            blocks[-1] += '\n  - {}'.format(entry['label'])
+            continue
+        group = None
+        blocks.append('{}\n{}'.format(label_heading(entry['label']),
+                                      indent_answer(msg[key])))
+    f_message += ''.join(block + '\n\n' for block in blocks)
 
     # Create another dictionary that has lowercase title as key and original
     # title as value
@@ -566,18 +590,22 @@ def format_message(msg, exclude=None):
         if key not in hidden_fields and is_answered(msg[titles[key]]):
             f_message += \
                 ('{}:\n{}\n\n'.format(convert_key_to_title(titles[key]),
-                                      msg[titles[key]]))
+                                      indent_answer(msg[titles[key]])))
 
     return f_message
 
 
 def field_labels(msg):
-    """The form's own labels for its fields, as (name, label) pairs in form order
+    """The form's own labels for its fields, in form order
 
     The website sends a hidden ``field_labels`` field holding a JSON list of
     ``{"name": ..., "label": ...}`` objects built from its form definitions.
-    A missing or malformed list gives no labels, so those fields fall back to
-    title-cased field names in alphabetical order.
+    An entry can also carry ``section``, the list of section titles the field
+    sits under, outermost first; ``opens_section``, true for a checkbox whose
+    section is headed by its own label; and ``group``, the question a
+    checkbox-group option belongs to. Each label comes back as a dict with
+    all five keys. A missing or malformed list gives no labels, so those
+    fields fall back to title-cased field names in alphabetical order.
     """
     try:
         entries = json.loads(msg.get('field_labels') or '[]')
@@ -591,8 +619,43 @@ def field_labels(msg):
             continue
         name, label = entry.get('name'), entry.get('label')
         if isinstance(name, str) and isinstance(label, str) and label.strip():
-            labels.append((name, label.strip()))
+            section = entry.get('section')
+            if not isinstance(section, list):
+                section = []
+            group = entry.get('group')
+            labels.append({
+                'name': name,
+                'label': label.strip(),
+                'section': tuple(title.strip() for title in section
+                                 if isinstance(title, str) and title.strip()),
+                'opens_section': entry.get('opens_section') is True,
+                'group': group.strip() if isinstance(group, str) else '',
+            })
     return labels
+
+
+def section_headings(current, new):
+    """Headings for the sections in new that current isn't already in
+
+    A top-level section is underlined; one inside it is set off with dashes.
+    """
+    same = 0
+    while same < min(len(current), len(new)) and current[same] == new[same]:
+        same += 1
+    headings = []
+    for depth, title in enumerate(new[same:], start=same):
+        if depth == 0:
+            headings.append('{}\n{}'.format(title, '=' * len(title)))
+        else:
+            headings.append('--- {} ---'.format(title))
+    return headings
+
+
+def indent_answer(value):
+    """An answer indented under its heading, line by line"""
+    lines = str(value).replace('\r\n', '\n').replace('\r', '\n').strip('\n')
+    return '\n'.join('    ' + line if line.strip() else ''
+                     for line in lines.split('\n'))
 
 
 def is_answered(value):

@@ -739,8 +739,8 @@ class TestFormsender(unittest.TestCase):
                           "Information:\n"
                           "------------\n"
                           "Some Field:\n"
-                          "This is multi line and should not be on the same "
-                          "line as the title\n\n")
+                          "    This is multi line and should not be on the "
+                          "same line as the title\n\n")
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
@@ -771,11 +771,11 @@ class TestFormsender(unittest.TestCase):
                           "EMAIL:   example@osuosl.org\n\n"
                           "Information:\n"
                           "------------\n"
-                          "vCPUs:\n8\n\n"
-                          "CI/CD resources:\nrequested\n\n"
-                          "Do you have a deadline?\nNo\n\n"
-                          "Contributions to cover costs:\nNone\n\n"
-                          "Zebra Field:\nz\n\n")
+                          "vCPUs:\n    8\n\n"
+                          "CI/CD resources:\n    requested\n\n"
+                          "Do you have a deadline?\n    No\n\n"
+                          "Contributions to cover costs:\n    None\n\n"
+                          "Zebra Field:\n    z\n\n")
         self.assertEqual(handler.format_message(message), target_message)
 
     def test_format_message_labelled_field_excluded(self):
@@ -791,7 +791,7 @@ class TestFormsender(unittest.TestCase):
                    'field_labels': labels}
         formatted = handler.format_message(message, exclude={'companyname'})
         self.assertNotIn('OPF', formatted)
-        self.assertIn('Other:\nx\n\n', formatted)
+        self.assertIn('Other:\n    x\n\n', formatted)
 
     def test_format_message_skips_blank_answers(self):
         """
@@ -816,23 +816,102 @@ class TestFormsender(unittest.TestCase):
                           "EMAIL:   example@osuosl.org\n\n"
                           "Information:\n"
                           "------------\n"
-                          "Number of VMs:\n0\n\n"
-                          "Managed?\nNot sure\n\n")
+                          "Number of VMs:\n    0\n\n"
+                          "Managed?\n    Not sure\n\n")
         self.assertEqual(handler.format_message(message), target_message)
 
     def test_field_labels(self):
         """
-        field_labels returns (name, label) pairs in order and skips entries
-        it can't use
+        field_labels returns the labels in order, fills in the optional
+        keys, and skips entries and section titles it can't use
         """
         labels = json.dumps([{'name': 'a', 'label': ' First '},
                              'not a dict',
                              {'name': 'b'},
                              {'name': 'c', 'label': '   '},
                              {'name': 3, 'label': 'Bad name'},
-                             {'name': 'd', 'label': 'Fourth'}])
-        self.assertEqual(handler.field_labels({'field_labels': labels}),
-                         [('a', 'First'), ('d', 'Fourth')])
+                             {'name': 'd', 'label': 'Fourth',
+                              'section': [' Email ', 3, ' ', 'Forwards'],
+                              'opens_section': True, 'group': ' Which? '},
+                             {'name': 'e', 'label': 'Fifth',
+                              'section': 'not a list', 'opens_section': 'yes',
+                              'group': 4}])
+        self.assertEqual(handler.field_labels({'field_labels': labels}), [
+            {'name': 'a', 'label': 'First', 'section': (),
+             'opens_section': False, 'group': ''},
+            {'name': 'd', 'label': 'Fourth', 'section': ('Email', 'Forwards'),
+             'opens_section': True, 'group': 'Which?'},
+            {'name': 'e', 'label': 'Fifth', 'section': (),
+             'opens_section': False, 'group': ''},
+        ])
+
+    def test_format_message_sections_and_groups(self):
+        """
+        Labelled fields are written under headings for their sections, a
+        chosen section checkbox shows only its heading, chosen checkbox-group
+        options are listed under the group's label, and multi-line answers are
+        indented line by line
+        """
+        labels = json.dumps([
+            {'name': 'project', 'label': 'Project name'},
+            {'name': 'mail', 'label': 'Email', 'section': ['Email'],
+             'opens_section': True},
+            {'name': 'inbound', 'label': 'Receiving mail', 'group': 'What do you need?',
+             'section': ['Email']},
+            {'name': 'outbound', 'label': 'Sending mail', 'group': 'What do you need?',
+             'section': ['Email']},
+            {'name': 'forwards', 'label': 'Forwards', 'group': 'What do you need?',
+             'section': ['Email']},
+            {'name': 'domain', 'label': 'Domain(s)', 'section': ['Email']},
+            {'name': 'arch_x86', 'label': 'x86_64', 'group': 'Architectures',
+             'section': ['Email']},
+            {'name': 'tools', 'label': 'Collaboration tools',
+             'section': ['Collaboration tools'], 'opens_section': True},
+            {'name': 'gitlab', 'label': 'GitLab',
+             'section': ['Collaboration tools', 'GitLab'], 'opens_section': True},
+            {'name': 'gitlab_domain', 'label': 'Domain',
+             'section': ['Collaboration tools', 'GitLab']},
+            {'name': 'matrix_domain', 'label': 'Domain',
+             'section': ['Collaboration tools', 'Matrix']},
+            {'name': 'deadline', 'label': 'Do you have a hard deadline?',
+             'section': ['Other details']},
+        ])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'project': 'Kestrel',
+                   'mail': 'requested',
+                   'inbound': 'requested',
+                   'forwards': 'requested',
+                   'domain': 'kestrel.example',
+                   'arch_x86': 'yes',
+                   'tools': 'requested',
+                   'gitlab': 'requested',
+                   'gitlab_domain': 'git.kestrel.example',
+                   'matrix_domain': 'matrix.kestrel.example',
+                   'deadline': 'March 31\r\n\r\nOur VM contract ends.\r\n',
+                   'field_labels': labels}
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Project name:\n    Kestrel\n\n"
+                          "Email\n=====\n\n"
+                          "What do you need?\n"
+                          "  - Receiving mail\n"
+                          "  - Forwards\n\n"
+                          "Domain(s):\n    kestrel.example\n\n"
+                          "Architectures:\n  - x86_64\n\n"
+                          "Collaboration tools\n===================\n\n"
+                          "--- GitLab ---\n\n"
+                          "Domain:\n    git.kestrel.example\n\n"
+                          "--- Matrix ---\n\n"
+                          "Domain:\n    matrix.kestrel.example\n\n"
+                          "Other details\n=============\n\n"
+                          "Do you have a hard deadline?\n"
+                          "    March 31\n\n    Our VM contract ends.\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
 
     def test_field_labels_fallback(self):
         """
@@ -847,7 +926,7 @@ class TestFormsender(unittest.TestCase):
                    'b_field': '2',
                    'a_field': '1',
                    'field_labels': 'not json'}
-        self.assertIn("A Field:\n1\n\nB Field:\n2\n\n",
+        self.assertIn("A Field:\n    1\n\nB Field:\n    2\n\n",
                       handler.format_message(message))
 
     def test_set_mail_subject_with_both_options(self):
@@ -1191,9 +1270,9 @@ class TestFormsender(unittest.TestCase):
                           "Information:\n"
                           "------------\n"
                           "Fields To Join:\n"
-                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n"
+                          "    Valid Guy:example@osuosl.org:%s:This is some info.\n\n"
                           "Some Field:\n"
-                          "This is some info.\n\n" % str(int(time.time())))
+                          "    This is some info.\n\n" % str(int(time.time())))
 
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
@@ -1222,9 +1301,9 @@ class TestFormsender(unittest.TestCase):
                           "Information:\n"
                           "------------\n"
                           "Some Field:\n"
-                          "This is some info.\n\n"
+                          "    This is some info.\n\n"
                           "With New Field Name:\n"
-                          "Valid Guy:example@osuosl.org:"
+                          "    Valid Guy:example@osuosl.org:"
                           "%s:This is some info.\n\n" % str(int(time.time())))
 
         message = handler.create_msg(req)
