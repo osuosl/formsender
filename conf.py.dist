@@ -5,7 +5,9 @@ import os
 
 TOKEN = os.environ['TOKEN']
 CEILING = 10
-DUPLICATE_CHECK_TIME = 3600  # seconds -- 60 seconds * 60 minutes
+# Seconds over which identical submissions are rejected as duplicates; 0 turns
+# the check off, such as for testing forms locally.
+DUPLICATE_CHECK_TIME = int(os.environ.get('DUPLICATE_CHECK_TIME', 3600))
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # max upload size in bytes (10 MiB)
 HOST = "0.0.0.0"
 PORT = 5000

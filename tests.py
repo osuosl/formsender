@@ -1353,6 +1353,17 @@ class TestFormsender(unittest.TestCase):
         self.assertFalse(controller.is_duplicate('whatever'))
         self.assertEqual(controller.hash_list, [])
 
+    def test_controller_duplicate_check_off(self):
+        """
+        A DUPLICATE_CHECK_TIME of 0 turns the duplicate check off, so the same
+        submission is accepted again.
+        """
+        controller = handler.Controller()
+        with patch.object(conf, 'DUPLICATE_CHECK_TIME', 0):
+            self.assertFalse(controller.is_duplicate('whatever'))
+            self.assertFalse(controller.is_duplicate('whatever'))
+        self.assertEqual(controller.hash_list, [])
+
 
 class TestCaptcha(unittest.TestCase):
     """

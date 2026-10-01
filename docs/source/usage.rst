@@ -14,7 +14,7 @@ defines the remaining tunables as plain values:
 
     TOKEN = os.environ['TOKEN']
     CEILING = 10
-    DUPLICATE_CHECK_TIME = 3600  # seconds
+    DUPLICATE_CHECK_TIME = int(os.environ.get('DUPLICATE_CHECK_TIME', 3600))
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # bytes
     HOST = "0.0.0.0"
     PORT = 5000
@@ -89,6 +89,10 @@ These must be supplied in the environment Formsender runs in (for example with
   ticket (queue, subject, requestor, custom fields, attachment names and body)
   instead of creating it in RT, and makes ``RT_TOKEN`` optional. Use it to test
   forms locally without sending real tickets.
+* ``DUPLICATE_CHECK_TIME`` (optional) is the window, in seconds, over which
+  identical submissions are rejected as duplicates. It defaults to ``3600``;
+  ``0`` turns the check off, so a form can be submitted again unchanged while
+  testing.
 * ``RT_URL`` (optional) overrides the RT REST2 endpoint. It defaults to
   ``https://support.osuosl.org/REST/2.0/``. Setting it lets a single image serve
   a different RT instance, so one container can be run per RT instance.
@@ -156,8 +160,6 @@ These are defined directly in ``conf.py`` and can be edited as needed:
 
 * ``CEILING`` is the maximum number of submissions Formsender will accept per
   second before returning a ``Too Many Requests`` error.
-* ``DUPLICATE_CHECK_TIME`` is the window (in seconds) over which identical
-  submissions are treated as duplicates.
 * ``MAX_CONTENT_LENGTH`` is the maximum size (in bytes) of a submitted request
   body, including any file uploads. Larger requests are rejected with a ``413``
   error. Defaults to 10 MiB.
@@ -258,7 +260,9 @@ To see the tickets your forms would create without sending anything to RT, set
 ``DRY_RUN=1``. Formsender then logs each ticket to standard output instead of
 creating it. Cloudflare publishes `Turnstile test keys`_ that always pass, so a
 local form can use the site key ``1x00000000000000000000AA`` with
-``TURNSTILE_SECRET=1x0000000000000000000000000000000AA``.
+``TURNSTILE_SECRET=1x0000000000000000000000000000000AA``. Set
+``DUPLICATE_CHECK_TIME=0`` as well if you submit the same form more than once
+an hour.
 
 To confirm that tickets are actually being created, point ``RT_URL`` and
 ``RT_TOKEN`` at a test RT instance and watch its queues.

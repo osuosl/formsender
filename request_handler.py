@@ -298,6 +298,8 @@ class Controller:
     # Duplicate-submission check methods
     def is_duplicate(self, submission):
         """Calculates a hash from a submission and adds it to the hash list"""
+        if conf.DUPLICATE_CHECK_TIME <= 0:
+            return False
         # Create a hexidecmal hash of the submission using sha512
         init_hash = hashlib.sha512()
         init_hash.update((str(submission)).encode())
