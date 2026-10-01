@@ -537,12 +537,13 @@ def format_message(msg, exclude=None):
         msg.pop('fields_to_join', None)
 
     # Fields the form labelled come first, in form order, headed by the
-    # label the requester saw
+    # label the requester saw. Questions left blank are left out.
     written = set()
     for key, label in labels:
         if key in msg and key.lower() not in hidden_fields and key not in written:
-            f_message += '{}\n{}\n\n'.format(label_heading(label), msg[key])
             written.add(key)
+            if is_answered(msg[key]):
+                f_message += '{}\n{}\n\n'.format(label_heading(label), msg[key])
 
     # Create another dictionary that has lowercase title as key and original
     # title as value
@@ -554,7 +555,7 @@ def format_message(msg, exclude=None):
     # Write each formatted key in title case and corresponding message to
     # f_message, each key and message is separated by two lines.
     for key in sorted(titles):
-        if key not in hidden_fields:
+        if key not in hidden_fields and is_answered(msg[titles[key]]):
             f_message += \
                 ('{}:\n{}\n\n'.format(convert_key_to_title(titles[key]),
                                       msg[titles[key]]))
@@ -584,6 +585,11 @@ def field_labels(msg):
         if isinstance(name, str) and isinstance(label, str) and label.strip():
             labels.append((name, label.strip()))
     return labels
+
+
+def is_answered(value):
+    """Whether a field holds an answer worth showing in the ticket body"""
+    return bool(str(value).strip())
 
 
 def label_heading(label):

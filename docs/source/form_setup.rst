@@ -166,7 +166,8 @@ resulting ticket:
     headed by their label. A label that ends in a question mark is used as is;
     any other label gets a colon. Fields that aren't in the list, or every field
     when ``field_labels`` is missing or not valid JSON, follow with title-cased
-    names in alphabetical order, as before. This should be a hidden field.
+    names in alphabetical order, as before. Fields submitted blank, labelled or
+    not, are left out of the body. This should be a hidden field.
 
     .. code-block:: html
 

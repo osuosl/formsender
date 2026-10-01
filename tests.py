@@ -739,6 +739,33 @@ class TestFormsender(unittest.TestCase):
         self.assertNotIn('OPF', formatted)
         self.assertIn('Other:\nx\n\n', formatted)
 
+    def test_format_message_skips_blank_answers(self):
+        """
+        Fields left blank, or holding only whitespace, are left out of the
+        body, whether or not the form labelled them. Defaults and zeros are
+        answers and stay.
+        """
+        labels = json.dumps([{'name': 'sponsor', 'label': 'Sponsor'},
+                             {'name': 'vms', 'label': 'Number of VMs'},
+                             {'name': 'managed', 'label': 'Managed?'}])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'sponsor': '',
+                   'vms': '0',
+                   'managed': 'Not sure',
+                   'notes': '  \n ',
+                   'unlabelled_blank': '',
+                   'field_labels': labels}
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "Number of VMs:\n0\n\n"
+                          "Managed?\nNot sure\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
     def test_field_labels(self):
         """
         field_labels returns (name, label) pairs in order and skips entries
