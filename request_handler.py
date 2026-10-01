@@ -510,9 +510,10 @@ def format_message(msg, exclude=None):
                      'name', 'email', 'mail_subject', 'send_to',
                      'fields_to_join_name', 'support', 'ibm_power',
                      'mail_subject_prefix', 'mail_subject_key',
-                     'custom_fields'] + list(captcha.FIELDS)
+                     'custom_fields', 'field_labels'] + list(captcha.FIELDS)
     if exclude:
         hidden_fields += list(exclude)
+    labels = field_labels(msg)
     # Contact information goes at the top
     f_message = ("Contact:\n--------\n"
                  "NAME:   {}\nEMAIL:   {}\n"
@@ -534,11 +535,20 @@ def format_message(msg, exclude=None):
             msg['Fields To Join'] = joined_data
         msg.pop('fields_to_join', None)
 
+    # Fields the form labelled come first, in form order, headed by the
+    # label the requester saw
+    written = set()
+    for key, label in labels:
+        if key in msg and key.lower() not in hidden_fields and key not in written:
+            f_message += '{}\n{}\n\n'.format(label_heading(label), msg[key])
+            written.add(key)
+
     # Create another dictionary that has lowercase title as key and original
     # title as value
     titles = {}
     for key in msg:
-        titles[key.lower()] = key
+        if key not in written:
+            titles[key.lower()] = key
 
     # Write each formatted key in title case and corresponding message to
     # f_message, each key and message is separated by two lines.
@@ -549,6 +559,38 @@ def format_message(msg, exclude=None):
                                       msg[titles[key]]))
 
     return f_message
+
+
+def field_labels(msg):
+    """The form's own labels for its fields, as (name, label) pairs in form order
+
+    The website sends a hidden ``field_labels`` field holding a JSON list of
+    ``{"name": ..., "label": ...}`` objects built from its form definitions.
+    A missing or malformed list gives no labels, so those fields fall back to
+    title-cased field names in alphabetical order.
+    """
+    try:
+        entries = json.loads(msg.get('field_labels') or '[]')
+    except ValueError:
+        return []
+    if not isinstance(entries, list):
+        return []
+    labels = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        name, label = entry.get('name'), entry.get('label')
+        if isinstance(name, str) and isinstance(label, str) and label.strip():
+            labels.append((name, label.strip()))
+    return labels
+
+
+def label_heading(label):
+    """A form label as a ticket heading: questions keep their question mark,
+    anything else ends in a colon"""
+    if label.endswith('?'):
+        return label
+    return label.rstrip('.') + ':'
 
 
 def convert_key_to_title(snake_case_key):

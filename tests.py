@@ -691,6 +691,84 @@ class TestFormsender(unittest.TestCase):
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
 
+    def test_format_message_uses_field_labels(self):
+        """
+        Fields named in field_labels are written first, in that order, under
+        their labels. Anything else follows as before, title-cased and
+        sorted, and field_labels itself stays out of the body.
+        """
+        labels = json.dumps([{'name': 'name', 'label': 'Name'},
+                             {'name': 'instance_vcpus', 'label': 'vCPUs'},
+                             {'name': 'ci_cd', 'label': 'CI/CD resources'},
+                             {'name': 'unchecked_box', 'label': 'Not sent'},
+                             {'name': 'deadline', 'label': 'Do you have a deadline?'},
+                             {'name': 'costs', 'label': 'Contributions to cover costs.'}])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'zebra_field': 'z',
+                   'costs': 'None',
+                   'deadline': 'No',
+                   'ci_cd': 'requested',
+                   'instance_vcpus': '8',
+                   'field_labels': labels}
+        target_message = ("Contact:\n"
+                          "--------\n"
+                          "NAME:   Valid Guy\n"
+                          "EMAIL:   example@osuosl.org\n\n"
+                          "Information:\n"
+                          "------------\n"
+                          "vCPUs:\n8\n\n"
+                          "CI/CD resources:\nrequested\n\n"
+                          "Do you have a deadline?\nNo\n\n"
+                          "Contributions to cover costs:\nNone\n\n"
+                          "Zebra Field:\nz\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
+    def test_format_message_labelled_field_excluded(self):
+        """
+        A labelled field consumed as an RT custom field stays out of the body
+        """
+        labels = json.dumps([{'name': 'companyname', 'label': 'Company'},
+                             {'name': 'other', 'label': 'Other'}])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'companyname': 'OPF',
+                   'other': 'x',
+                   'field_labels': labels}
+        formatted = handler.format_message(message, exclude={'companyname'})
+        self.assertNotIn('OPF', formatted)
+        self.assertIn('Other:\nx\n\n', formatted)
+
+    def test_field_labels(self):
+        """
+        field_labels returns (name, label) pairs in order and skips entries
+        it can't use
+        """
+        labels = json.dumps([{'name': 'a', 'label': ' First '},
+                             'not a dict',
+                             {'name': 'b'},
+                             {'name': 'c', 'label': '   '},
+                             {'name': 3, 'label': 'Bad name'},
+                             {'name': 'd', 'label': 'Fourth'}])
+        self.assertEqual(handler.field_labels({'field_labels': labels}),
+                         [('a', 'First'), ('d', 'Fourth')])
+
+    def test_field_labels_fallback(self):
+        """
+        A missing, malformed or non-list field_labels gives no labels, so the
+        body falls back to title-cased, sorted field names
+        """
+        for value in (None, '', 'not json', '{"name": "a"}'):
+            msg = {} if value is None else {'field_labels': value}
+            self.assertEqual(handler.field_labels(msg), [])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'b_field': '2',
+                   'a_field': '1',
+                   'field_labels': 'not json'}
+        self.assertIn("A Field:\n1\n\nB Field:\n2\n\n",
+                      handler.format_message(message))
+
     def test_set_mail_subject_with_both_options(self):
         """
         set_mail_subject(message) returns the string

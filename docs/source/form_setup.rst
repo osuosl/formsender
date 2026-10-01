@@ -158,6 +158,32 @@ resulting ticket:
     The RT user identified by ``RT_TOKEN`` must have permission to set the named
     custom fields on tickets in the target queue.
 
+* **field_labels**
+
+    gives the ticket body the form's own labels and order. The value is a JSON
+    list of ``{"name": ..., "label": ...}`` objects in the order the fields
+    appear on the form. Fields in the list are written first, in that order,
+    headed by their label. A label that ends in a question mark is used as is;
+    any other label gets a colon. Fields that aren't in the list, or every field
+    when ``field_labels`` is missing or not valid JSON, follow with title-cased
+    names in alphabetical order, as before. This should be a hidden field.
+
+    .. code-block:: html
+
+      <input type="hidden" name="field_labels"
+             value='[{"name": "instance_vcpus", "label": "vCPUs"},
+                     {"name": "current_hosting", "label": "Where are you hosted today?"}]' />
+
+    result section of the ticket body:
+
+    .. code-block:: html
+
+      vCPUs:
+      8
+
+      Where are you hosted today?
+      A VPS
+
 * **fields_to_join**
 
     Sets a field that joins other fields' values with colons. The value of the
