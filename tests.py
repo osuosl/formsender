@@ -1,4 +1,7 @@
 import unittest
+import os
+import types
+from importlib.machinery import SourceFileLoader
 import werkzeug
 import base64
 import json
@@ -141,6 +144,57 @@ class TestFormsender(unittest.TestCase):
             instance.create_ticket.assert_called_with(
                 queue='General', subject='subj', content='body',
                 Requestor='noreply@osuosl.org', attachments=[attachment])
+
+    def test_send_ticket_dry_run(self):
+        """
+        With DRY_RUN set, send_ticket logs the ticket and never contacts RT
+        """
+        attachment = rt.rest2.Attachment('proposal.pdf', 'application/pdf',
+                                         b'proposal bytes')
+        with patch.object(conf, 'DRY_RUN', True, create=True), \
+                patch('rt.rest2.Rt') as mock_rt, \
+                self.assertLogs('formsender', level='INFO') as logs:
+            handler.send_ticket('the body', 'subj', 'HostingRequests',
+                                'jane@example.org', [attachment],
+                                {'CompanyName': 'OPF'})
+        mock_rt.assert_not_called()
+        logged = logs.output[0]
+        for text in ('Queue: HostingRequests', 'Subject: subj',
+                     'Requestor: jane@example.org',
+                     "Custom fields: {'CompanyName': 'OPF'}",
+                     'Attachment: proposal.pdf', 'the body'):
+            self.assertIn(text, logged)
+
+    def test_send_ticket_dry_run_minimal(self):
+        """
+        A dry-run ticket without custom fields or attachments logs neither
+        """
+        with patch.object(conf, 'DRY_RUN', True, create=True), \
+                self.assertLogs('formsender', level='INFO') as logs:
+            handler.send_ticket('the body', 'subj')
+        self.assertNotIn('Custom fields', logs.output[0])
+        self.assertNotIn('Attachment', logs.output[0])
+
+    def test_conf_dist_dry_run(self):
+        """
+        conf.py.dist reads DRY_RUN from the environment and no longer
+        requires RT_TOKEN
+        """
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'conf.py.dist')
+
+        def load(env):
+            with patch.dict(os.environ, env, clear=True):
+                loader = SourceFileLoader('conf_dist', path)
+                module = types.ModuleType(loader.name)
+                loader.exec_module(module)
+                return module
+        for value, expected in (('1', True), ('true', True), ('YES', True),
+                                ('', False), ('0', False), ('no', False)):
+            dist = load({'TOKEN': 't', 'DRY_RUN': value})
+            self.assertIs(dist.DRY_RUN, expected)
+            self.assertIsNone(dist.RT_TOKEN)
+        self.assertIs(load({'TOKEN': 't'}).DRY_RUN, False)
 
     def test_extract_custom_fields(self):
         """
@@ -1372,6 +1426,20 @@ class TestCaptcha(unittest.TestCase):
         with patch.multiple(conf, TURNSTILE_SECRET=None,
                             RECAPTCHA_SECRET=''):
             self.assertEqual(captcha.configured_providers(), ['altcha'])
+
+    def test_create_app_requires_rt_token(self):
+        """
+        create_app refuses to start without RT_TOKEN unless DRY_RUN is set
+        """
+        with patch.object(conf, 'RT_TOKEN', None), \
+                patch.object(conf, 'DRY_RUN', False, create=True):
+            with self.assertRaises(RuntimeError):
+                handler.create_app()
+        with patch.object(conf, 'RT_TOKEN', None), \
+                patch.object(conf, 'DRY_RUN', True, create=True), \
+                self.assertLogs('formsender', level='WARNING') as logs:
+            handler.create_app()
+        self.assertIn('DRY_RUN', logs.output[-1])
 
     def test_create_app_requires_a_provider(self):
         with patch.multiple(conf, TURNSTILE_SECRET=None, ALTCHA_HMAC_KEY=None,

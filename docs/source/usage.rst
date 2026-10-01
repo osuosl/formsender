@@ -28,7 +28,8 @@ defines the remaining tunables as plain values:
     ALTCHA_COST = 5000
     ALTCHA_EXPIRES = 600
     URL = os.environ.get('RT_URL', "https://support.osuosl.org/REST/2.0/")
-    RT_TOKEN = os.environ['RT_TOKEN']
+    RT_TOKEN = os.environ.get('RT_TOKEN')
+    DRY_RUN = os.environ.get('DRY_RUN', '').lower() in ('1', 'true', 'yes')
     SENTRY_URI = os.environ.get('SENTRY_URI')
 
 Environment variables
@@ -83,7 +84,11 @@ These must be supplied in the environment Formsender runs in (for example with
   is reachable directly, where the header can be forged.
 * ``RT_TOKEN`` is the RT authentication token used to connect to the RT REST2
   API. It belongs to an RT user with permission to create tickets in the target
-  queues.
+  queues. Formsender refuses to start without it unless ``DRY_RUN`` is set.
+* ``DRY_RUN`` (optional), when set to ``1``, ``true`` or ``yes``, logs each
+  ticket (queue, subject, requestor, custom fields, attachment names and body)
+  instead of creating it in RT, and makes ``RT_TOKEN`` optional. Use it to test
+  forms locally without sending real tickets.
 * ``RT_URL`` (optional) overrides the RT REST2 endpoint. It defaults to
   ``https://support.osuosl.org/REST/2.0/``. Setting it lets a single image serve
   a different RT instance, so one container can be run per RT instance.
@@ -206,7 +211,8 @@ installs only ``requirements.txt``):
 
 Before you run Formsender, copy the contents of ``conf.py.dist`` into a new file
 called ``conf.py`` as described above, and export the required environment
-variables (``TOKEN``, ``RT_TOKEN``, and at least one captcha secret).
+variables (``TOKEN``, at least one captcha secret, and ``RT_TOKEN`` or
+``DRY_RUN``).
 
 You can lint the application with flake8:
 
@@ -246,9 +252,18 @@ Local Form Testing
 An example of a simple form can be found in ``templates/index.html``. If you
 open this in your browser, you can use it to POST to the ``PORT`` defined in
 ``conf.py``. The form redirects to ``http://www.osuosl.org`` on success; change
-the ``redirect`` field value to any site you wish. To confirm that tickets are
-actually being created, point ``RT_URL`` and ``RT_TOKEN`` at a test RT instance
-and watch its queues.
+the ``redirect`` field value to any site you wish.
+
+To see the tickets your forms would create without sending anything to RT, set
+``DRY_RUN=1``. Formsender then logs each ticket to standard output instead of
+creating it. Cloudflare publishes `Turnstile test keys`_ that always pass, so a
+local form can use the site key ``1x00000000000000000000AA`` with
+``TURNSTILE_SECRET=1x0000000000000000000000000000000AA``.
+
+To confirm that tickets are actually being created, point ``RT_URL`` and
+``RT_TOKEN`` at a test RT instance and watch its queues.
+
+.. _Turnstile test keys: https://developers.cloudflare.com/turnstile/troubleshooting/testing/
 
 .. _form setup documentation: http://formsender.readthedocs.org/en/latest/form_setup.html
 .. _error codes documentation: http://formsender.readthedocs.org/en/latest/errorcodes.html

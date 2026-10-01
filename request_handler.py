@@ -394,6 +394,12 @@ def create_app(with_static=True):
     providers = captcha.check_configuration()
     logger.info('formsender: captcha providers configured: %s',
                 ', '.join(providers))
+    if getattr(conf, 'DRY_RUN', False):
+        logger.warning('formsender: DRY_RUN is set, so tickets are logged '
+                       'and not sent to RT')
+    elif not getattr(conf, 'RT_TOKEN', None):
+        raise RuntimeError('RT_TOKEN is not set; set it, or set DRY_RUN to '
+                           'log tickets instead of sending them')
 
     # Initiate rate/duplicate controller and application
     controller = Controller()
@@ -710,6 +716,10 @@ def send_ticket(msg, subject, send_to_queue='General',
                 mail_from='noreply@osuosl.org', attachments=None,
                 custom_fields=None):
     """Creates ticket and sends to RT"""
+    if getattr(conf, 'DRY_RUN', False):
+        log_ticket(msg, subject, send_to_queue, mail_from, attachments,
+                   custom_fields)
+        return
     # Creates connection to REST
     tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
     ticket_args = {
@@ -726,6 +736,21 @@ def send_ticket(msg, subject, send_to_queue='General',
         ticket_args['CustomFields'] = custom_fields
     # Create ticket and send to RT
     tracker.create_ticket(**ticket_args)
+
+
+def log_ticket(msg, subject, send_to_queue, mail_from, attachments,
+               custom_fields):
+    """Logs the ticket send_ticket would create, for DRY_RUN"""
+    lines = ['DRY_RUN ticket (not sent to RT)',
+             'Queue: {}'.format(send_to_queue),
+             'Subject: {}'.format(subject),
+             'Requestor: {}'.format(mail_from)]
+    if custom_fields:
+        lines.append('Custom fields: {}'.format(custom_fields))
+    for attachment in attachments or []:
+        lines.append('Attachment: {}'.format(attachment.file_name))
+    lines += ['', msg]
+    logging.getLogger('formsender').info('\n'.join(lines))
 
 
 # Start application
