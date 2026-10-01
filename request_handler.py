@@ -207,10 +207,11 @@ class Forms:
             if 'send_to' in message and message['send_to']:
                 self.logger.debug('formsender: ticket queue: %s',
                                   message['send_to'])
-            # Full request, minus the captcha payload
+            # Full request, minus the captcha payload and the form's labels
             self.logger.debug('formsender message: %s',
                               {key: value for key, value in message.items()
-                               if key not in captcha.FIELDS})
+                               if key not in captcha.FIELDS
+                               and key != 'field_labels'})
 
             attachments = extract_attachments(request)
             for attachment in attachments:

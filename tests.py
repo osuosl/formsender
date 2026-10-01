@@ -1814,6 +1814,22 @@ class TestCaptchaHardening(unittest.TestCase):
         self.assertIn('Valid Guy', logged)
         self.assertNotIn(payload, logged)
 
+    def test_field_labels_are_not_logged_with_the_submission(self):
+        app = handler.create_app()
+        labels = json.dumps([{'name': 'name', 'label': 'Label Text'}])
+        req = self.request(name='Valid Guy', email='example@osuosl.org',
+                           last_name='', token=conf.TOKEN,
+                           redirect='http://www.example.com',
+                           altcha=self.altcha_payload(), field_labels=labels)
+        with patch.object(app, 'logger') as logger:
+            with patch('request_handler.validate_email', return_value=True):
+                with patch('request_handler.send_ticket'):
+                    with patch('werkzeug.utils.redirect'):
+                        app.on_form_page(req)
+        logged = ' '.join(str(call) for call in logger.debug.call_args_list)
+        self.assertIn('Valid Guy', logged)
+        self.assertNotIn('Label Text', logged)
+
     def test_issued_challenge_verifies_with_the_shipped_defaults(self):
         """The mint and verify paths must agree on the real conf.py values"""
         defaults = patch.multiple(conf, ALTCHA_ALGORITHM='PBKDF2/SHA-256',
