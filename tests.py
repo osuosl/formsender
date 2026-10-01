@@ -31,6 +31,12 @@ def setUpModule():
         setattr(conf, name, value)
 
 
+# The start of every ticket body
+CONTACT = ("Contact\n=======\n\n"
+           "Name:\n    Valid Guy\n\n"
+           "Email:\n    example@osuosl.org\n\n")
+
+
 class TestFormsender(unittest.TestCase):
 
     def test_create_msg_with_content(self):
@@ -732,12 +738,8 @@ class TestFormsender(unittest.TestCase):
                                        'token': conf.TOKEN})
         env = builder.get_environ()
         req = Request(env)
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Some Field:\n"
                           "    This is multi line and should not be on the "
                           "same line as the title\n\n")
@@ -765,12 +767,8 @@ class TestFormsender(unittest.TestCase):
                    'ci_cd': 'requested',
                    'instance_vcpus': '8',
                    'field_labels': labels}
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "vCPUs:\n    8\n\n"
                           "CI/CD resources:\n    requested\n\n"
                           "Do you have a deadline?\n    No\n\n"
@@ -810,14 +808,48 @@ class TestFormsender(unittest.TestCase):
                    'notes': '  \n ',
                    'unlabelled_blank': '',
                    'field_labels': labels}
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Number of VMs:\n    0\n\n"
                           "Managed?\n    Not sure\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
+    def test_format_message_wraps_answers(self):
+        """
+        Long answers and list items are wrapped to WRAP_WIDTH under their
+        heading, keeping the requester's line breaks. A line with a long word,
+        such as an SSH key, isn't wrapped, so it can still be copied. A
+        section inside one with no chooser of its own is listed in the summary
+        under both titles.
+        """
+        labels = json.dumps([
+            {'name': 'mysql', 'label': 'MySQL', 'opens_section': True,
+             'section': ['Databases', 'MySQL']},
+            {'name': 'notes', 'label': 'Notes', 'section': ['Databases', 'MySQL']},
+            {'name': 'kind', 'label': 'A rather long option label that will '
+             'need to be wrapped onto a second line of text', 'group': 'Kind',
+             'section': ['Databases', 'MySQL']}])
+        key = 'ssh-ed25519 ' + 'A' * 68 + ' dana@kestrel.example'
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'mysql': 'requested',
+                   'notes': ('word ' * 20).strip() + '\n' + key,
+                   'kind': 'yes',
+                   'field_labels': labels}
+        target_message = (CONTACT +
+                          "Services requested\n==================\n\n"
+                          "  - Databases: MySQL\n\n"
+                          "Databases\n=========\n\n"
+                          "--- MySQL ---\n\n"
+                          "Notes:\n"
+                          "    word word word word word word word word word "
+                          "word word word word word word\n"
+                          "    word word word word word\n"
+                          "    " + key + "\n\n"
+                          "Kind:\n"
+                          "  - A rather long option label that will need to "
+                          "be wrapped onto a second line\n"
+                          "    of text\n\n")
         self.assertEqual(handler.format_message(message), target_message)
 
     def test_field_labels(self):
@@ -890,12 +922,11 @@ class TestFormsender(unittest.TestCase):
                    'matrix_domain': 'matrix.kestrel.example',
                    'deadline': 'March 31\r\n\r\nOur VM contract ends.\r\n',
                    'field_labels': labels}
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Services requested\n==================\n\n"
+                          "  - Email\n"
+                          "  - Collaboration tools: GitLab\n\n"
+                          "Information\n===========\n\n"
                           "Project name:\n    Kestrel\n\n"
                           "Email\n=====\n\n"
                           "What do you need?\n"
@@ -1263,12 +1294,8 @@ class TestFormsender(unittest.TestCase):
                                        'fields_to_join': 'name,email,date,some_field'})
         env = builder.get_environ()
         req = Request(env)
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Fields To Join:\n"
                           "    Valid Guy:example@osuosl.org:%s:This is some info.\n\n"
                           "Some Field:\n"
@@ -1294,12 +1321,8 @@ class TestFormsender(unittest.TestCase):
                                        'fields_to_join': 'name,email,date,some_field'})
         env = builder.get_environ()
         req = Request(env)
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Some Field:\n"
                           "    This is some info.\n\n"
                           "With New Field Name:\n"

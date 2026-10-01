@@ -175,10 +175,12 @@ resulting ticket:
     - ``section``: the titles of the sections the field sits under, outermost
       first, such as ``["Collaboration tools", "GitLab"]``. A heading is written
       wherever the section changes. A top-level section is underlined with
-      ``=``; one inside it is set off with dashes.
+      ``=``; one inside it is set off with dashes. Fields without a section go
+      under "Information".
     - ``opens_section``: ``true`` for a checkbox that opens its own section,
       such as a service the requester chose. Its section's heading shows it was
-      chosen, so its value isn't written.
+      chosen, so its value isn't written. The chosen ones are also listed under
+      "Services requested", after the contact details.
     - ``group``: the question a checkbox belongs to. Chosen checkboxes in a row
       with the same group are listed under that question.
 
@@ -197,6 +199,14 @@ resulting ticket:
     result section of the ticket body:
 
     .. code-block:: html
+
+      Services requested
+      ==================
+
+        - Virtual machines
+
+      Information
+      ===========
 
       Where are you hosted today?
           A VPS
@@ -259,33 +269,34 @@ Any field that is not one of the special fields above (and is not mapped to a
 custom field) is included in the ticket body. Formsender formats the body like
 so::
 
-    Contact:
-    --------
-    NAME:   Submitted Name
-    EMAIL:   email@example.com
+    Contact
+    =======
 
-    Information:
-    ------------
+    Name:
+        Submitted Name
+
+    Email:
+        email@example.com
+
+    Information
+    ===========
+
     Community Size:
-
-    About 15 developers
+        About 15 developers
 
     Deployment Timeframe:
-
-    Within 7 days
+        Within 7 days
 
     Distribution:
-
-    Fedora
+        Fedora
 
     Duration Of Need:
-
-    Six months
+        Six months
 
 The contact information, name and email, is placed at the beginning of the
 ticket body. All following fields are placed in alphabetical order by the input
-``name``. Formsender formats each input ``name`` to title case and uses it as a
-heading in the body. **Make sure these name fields are descriptive** and do not
+``name``, with each answer indented and wrapped to 80 columns. Formsender
+formats each input ``name`` to title case and uses it as a heading in the body. **Make sure these name fields are descriptive** and do not
 use strange formatting like the following:
 
 .. code-block:: html

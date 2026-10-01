@@ -28,10 +28,17 @@ import conf
 import captcha
 import time
 import json
+import textwrap
 import rt.rest2
 
 # Redeemed ALTCHA challenges kept in memory per worker process
 MAX_SEEN_CHALLENGES = 10000
+# Ticket body: answers are wrapped to this many columns, and labelled fields
+# the form didn't put in a section go under this one
+WRAP_WIDTH = 80
+# Lines with a word longer than this, such as an SSH key, aren't wrapped
+UNWRAPPED_WORD = 40
+DEFAULT_SECTION = ('Information',)
 
 
 class Forms:
@@ -523,11 +530,17 @@ def format_message(msg, exclude=None):
     if exclude:
         hidden_fields += list(exclude)
     labels = field_labels(msg)
-    # Contact information goes at the top
-    f_message = ("Contact:\n--------\n"
-                 "NAME:   {}\nEMAIL:   {}\n"
-                 "\nInformation:\n------------\n"
-                 .format(msg['name'], msg['email']))
+    # Contact information goes at the top, then a summary of the services
+    # requested, if the form has any
+    blocks = section_headings((), ('Contact',))
+    blocks.append('Name:\n' + indent_answer(msg['name']))
+    blocks.append('Email:\n' + indent_answer(msg['email']))
+    section = ('Contact',)
+    summary = requested_sections(msg, labels, hidden_fields)
+    if summary:
+        blocks += section_headings(section, ('Services requested',))
+        blocks.append(summary)
+        section = ('Services requested',)
 
     # If fields_to_join_name specified, add the key, data to the dictionary
     # Otherwise, create fields_to_join key, data and add to dictionary
@@ -548,8 +561,6 @@ def format_message(msg, exclude=None):
     # label the requester saw and under the sections the form put them in.
     # Questions left blank are left out.
     written = set()
-    blocks = []
-    section = ()
     group = None
     for entry in labels:
         key = entry['name']
@@ -558,9 +569,9 @@ def format_message(msg, exclude=None):
         written.add(key)
         if not is_answered(msg[key]):
             continue
-        if entry['section'] != section:
-            blocks += section_headings(section, entry['section'])
-            section = entry['section']
+        if (entry['section'] or DEFAULT_SECTION) != section:
+            blocks += section_headings(section, entry['section'] or DEFAULT_SECTION)
+            section = entry['section'] or DEFAULT_SECTION
             group = None
         if entry['opens_section']:
             # A chosen service: its heading says it was requested
@@ -570,12 +581,11 @@ def format_message(msg, exclude=None):
             if entry['group'] != group:
                 blocks.append(label_heading(entry['group']))
                 group = entry['group']
-            blocks[-1] += '\n  - {}'.format(entry['label'])
+            blocks[-1] += '\n' + bullet(entry['label'])
             continue
         group = None
         blocks.append('{}\n{}'.format(label_heading(entry['label']),
                                       indent_answer(msg[key])))
-    f_message += ''.join(block + '\n\n' for block in blocks)
 
     # Create another dictionary that has lowercase title as key and original
     # title as value
@@ -584,15 +594,17 @@ def format_message(msg, exclude=None):
         if key not in written:
             titles[key.lower()] = key
 
-    # Write each formatted key in title case and corresponding message to
-    # f_message, each key and message is separated by two lines.
+    # Write each formatted key in title case and corresponding message,
+    # under the default section
     for key in sorted(titles):
         if key not in hidden_fields and is_answered(msg[titles[key]]):
-            f_message += \
-                ('{}:\n{}\n\n'.format(convert_key_to_title(titles[key]),
-                                      indent_answer(msg[titles[key]])))
+            if section != DEFAULT_SECTION:
+                blocks += section_headings(section, DEFAULT_SECTION)
+                section = DEFAULT_SECTION
+            blocks.append('{}:\n{}'.format(convert_key_to_title(titles[key]),
+                                           indent_answer(msg[titles[key]])))
 
-    return f_message
+    return ''.join(block + '\n\n' for block in blocks)
 
 
 def field_labels(msg):
@@ -634,6 +646,25 @@ def field_labels(msg):
     return labels
 
 
+def requested_sections(msg, labels, hidden_fields):
+    """A list of the sections the requester opened, such as the services
+    they chose, with the ones inside each section after a colon"""
+    items = []
+    for entry in labels:
+        key = entry['name']
+        if (not entry['opens_section'] or key.lower() in hidden_fields
+                or not is_answered(msg.get(key, ''))):
+            continue
+        outer = entry['section'][:-1]
+        if outer and items and items[-1][0] == outer[0]:
+            items[-1][1].append(entry['label'])
+        else:
+            items.append((': '.join(entry['section'][:1] + (entry['label'],))
+                          if outer else entry['label'], []))
+    return '\n'.join(bullet(label + (': ' + ', '.join(inner) if inner else ''))
+                     for label, inner in items)
+
+
 def section_headings(current, new):
     """Headings for the sections in new that current isn't already in
 
@@ -652,10 +683,28 @@ def section_headings(current, new):
 
 
 def indent_answer(value):
-    """An answer indented under its heading, line by line"""
+    """An answer indented under its heading, each line wrapped to WRAP_WIDTH"""
     lines = str(value).replace('\r\n', '\n').replace('\r', '\n').strip('\n')
-    return '\n'.join('    ' + line if line.strip() else ''
-                     for line in lines.split('\n'))
+    wrapped = []
+    for line in lines.split('\n'):
+        if any(len(word) > UNWRAPPED_WORD for word in line.split()):
+            # Probably an SSH key or a long URL, which must stay copyable
+            wrapped.append('    ' + line.rstrip())
+        else:
+            wrapped += wrap(line, '    ', '    ') or ['']
+    return '\n'.join(wrapped)
+
+
+def bullet(text):
+    """A list item, wrapped to WRAP_WIDTH"""
+    return '\n'.join(wrap(text, '  - ', '    '))
+
+
+def wrap(text, first, rest):
+    """text wrapped to WRAP_WIDTH, keeping long words such as URLs whole"""
+    return textwrap.wrap(text.rstrip(), WRAP_WIDTH, initial_indent=first,
+                         subsequent_indent=rest, break_long_words=False,
+                         break_on_hyphens=False)
 
 
 def is_answered(value):
