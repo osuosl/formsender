@@ -1,0 +1,12 @@
+# Keep local files out of the image; a local conf.py would replace the
+# conf.py.dist the Dockerfile installs.
+.git
+.claude/
+venv/
+.venv/
+conf.py
+__pycache__/
+*.pyc
+.coverage
+htmlcov/
+docs/build/

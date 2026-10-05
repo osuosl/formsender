@@ -28,10 +28,17 @@ import conf
 import captcha
 import time
 import json
+import textwrap
 import rt.rest2
 
 # Redeemed ALTCHA challenges kept in memory per worker process
 MAX_SEEN_CHALLENGES = 10000
+# Ticket body: answers are wrapped to this many columns, and labelled fields
+# the form didn't put in a section go under this one
+WRAP_WIDTH = 80
+# Lines with a word longer than this, such as an SSH key, aren't wrapped
+UNWRAPPED_WORD = 40
+DEFAULT_SECTION = ('Information',)
 
 
 class Forms:
@@ -207,10 +214,11 @@ class Forms:
             if 'send_to' in message and message['send_to']:
                 self.logger.debug('formsender: ticket queue: %s',
                                   message['send_to'])
-            # Full request, minus the captcha payload
+            # Full request, minus the captcha payload and the form's labels
             self.logger.debug('formsender message: %s',
                               {key: value for key, value in message.items()
-                               if key not in captcha.FIELDS})
+                               if key not in captcha.FIELDS
+                               and key != 'field_labels'})
 
             attachments = extract_attachments(request)
             for attachment in attachments:
@@ -297,6 +305,8 @@ class Controller:
     # Duplicate-submission check methods
     def is_duplicate(self, submission):
         """Calculates a hash from a submission and adds it to the hash list"""
+        if conf.DUPLICATE_CHECK_TIME <= 0:
+            return False
         # Create a hexidecmal hash of the submission using sha512
         init_hash = hashlib.sha512()
         init_hash.update((str(submission)).encode())
@@ -393,6 +403,12 @@ def create_app(with_static=True):
     providers = captcha.check_configuration()
     logger.info('formsender: captcha providers configured: %s',
                 ', '.join(providers))
+    if getattr(conf, 'DRY_RUN', False):
+        logger.warning('formsender: DRY_RUN is set, so tickets are logged '
+                       'and not sent to RT')
+    elif not getattr(conf, 'RT_TOKEN', None):
+        raise RuntimeError('RT_TOKEN is not set; set it, or set DRY_RUN to '
+                           'log tickets instead of sending them')
 
     # Initiate rate/duplicate controller and application
     controller = Controller()
@@ -510,14 +526,21 @@ def format_message(msg, exclude=None):
                      'name', 'email', 'mail_subject', 'send_to',
                      'fields_to_join_name', 'support', 'ibm_power',
                      'mail_subject_prefix', 'mail_subject_key',
-                     'custom_fields'] + list(captcha.FIELDS)
+                     'custom_fields', 'field_labels'] + list(captcha.FIELDS)
     if exclude:
         hidden_fields += list(exclude)
-    # Contact information goes at the top
-    f_message = ("Contact:\n--------\n"
-                 "NAME:   {}\nEMAIL:   {}\n"
-                 "\nInformation:\n------------\n"
-                 .format(msg['name'], msg['email']))
+    labels = field_labels(msg)
+    # Contact information goes at the top, then a summary of the services
+    # requested, if the form has any
+    blocks = section_headings((), ('Contact',))
+    blocks.append('Name:\n' + indent_answer(msg['name']))
+    blocks.append('Email:\n' + indent_answer(msg['email']))
+    section = ('Contact',)
+    summary = requested_sections(msg, labels, hidden_fields)
+    if summary:
+        blocks += section_headings(section, ('Services requested',))
+        blocks.append(summary)
+        section = ('Services requested',)
 
     # If fields_to_join_name specified, add the key, data to the dictionary
     # Otherwise, create fields_to_join key, data and add to dictionary
@@ -534,21 +557,167 @@ def format_message(msg, exclude=None):
             msg['Fields To Join'] = joined_data
         msg.pop('fields_to_join', None)
 
+    # Fields the form labelled come first, in form order, headed by the
+    # label the requester saw and under the sections the form put them in.
+    # Questions left blank are left out.
+    written = set()
+    group = None
+    for entry in labels:
+        key = entry['name']
+        if key not in msg or key.lower() in hidden_fields or key in written:
+            continue
+        written.add(key)
+        if not is_answered(msg[key]):
+            continue
+        if (entry['section'] or DEFAULT_SECTION) != section:
+            blocks += section_headings(section, entry['section'] or DEFAULT_SECTION)
+            section = entry['section'] or DEFAULT_SECTION
+            group = None
+        if entry['opens_section']:
+            # A chosen service: its heading says it was requested
+            continue
+        if entry['group']:
+            # Chosen checkbox-group options, listed under the group's label
+            if entry['group'] != group:
+                blocks.append(label_heading(entry['group']))
+                group = entry['group']
+            blocks[-1] += '\n' + bullet(entry['label'])
+            continue
+        group = None
+        blocks.append('{}\n{}'.format(label_heading(entry['label']),
+                                      indent_answer(msg[key])))
+
     # Create another dictionary that has lowercase title as key and original
     # title as value
     titles = {}
     for key in msg:
-        titles[key.lower()] = key
+        if key not in written:
+            titles[key.lower()] = key
 
-    # Write each formatted key in title case and corresponding message to
-    # f_message, each key and message is separated by two lines.
+    # Write each formatted key in title case and corresponding message,
+    # under the default section
     for key in sorted(titles):
-        if key not in hidden_fields:
-            f_message += \
-                ('{}:\n{}\n\n'.format(convert_key_to_title(titles[key]),
-                                      msg[titles[key]]))
+        if key not in hidden_fields and is_answered(msg[titles[key]]):
+            if section != DEFAULT_SECTION:
+                blocks += section_headings(section, DEFAULT_SECTION)
+                section = DEFAULT_SECTION
+            blocks.append('{}:\n{}'.format(convert_key_to_title(titles[key]),
+                                           indent_answer(msg[titles[key]])))
 
-    return f_message
+    return ''.join(block + '\n\n' for block in blocks)
+
+
+def field_labels(msg):
+    """The form's own labels for its fields, in form order
+
+    The website sends a hidden ``field_labels`` field holding a JSON list of
+    ``{"name": ..., "label": ...}`` objects built from its form definitions.
+    An entry can also carry ``section``, the list of section titles the field
+    sits under, outermost first; ``opens_section``, true for a checkbox whose
+    section is headed by its own label; and ``group``, the question a
+    checkbox-group option belongs to. Each label comes back as a dict with
+    all five keys. A missing or malformed list gives no labels, so those
+    fields fall back to title-cased field names in alphabetical order.
+    """
+    try:
+        entries = json.loads(msg.get('field_labels') or '[]')
+    except ValueError:
+        return []
+    if not isinstance(entries, list):
+        return []
+    labels = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        name, label = entry.get('name'), entry.get('label')
+        if isinstance(name, str) and isinstance(label, str) and label.strip():
+            section = entry.get('section')
+            if not isinstance(section, list):
+                section = []
+            group = entry.get('group')
+            labels.append({
+                'name': name,
+                'label': label.strip(),
+                'section': tuple(title.strip() for title in section
+                                 if isinstance(title, str) and title.strip()),
+                'opens_section': entry.get('opens_section') is True,
+                'group': group.strip() if isinstance(group, str) else '',
+            })
+    return labels
+
+
+def requested_sections(msg, labels, hidden_fields):
+    """A list of the sections the requester opened, such as the services
+    they chose, with the ones inside each section after a colon"""
+    items = []
+    for entry in labels:
+        key = entry['name']
+        if (not entry['opens_section'] or key.lower() in hidden_fields
+                or not is_answered(msg.get(key, ''))):
+            continue
+        outer = entry['section'][:-1]
+        if outer and items and items[-1][0] == outer[0]:
+            items[-1][1].append(entry['label'])
+        else:
+            items.append((': '.join(entry['section'][:1] + (entry['label'],))
+                          if outer else entry['label'], []))
+    return '\n'.join(bullet(label + (': ' + ', '.join(inner) if inner else ''))
+                     for label, inner in items)
+
+
+def section_headings(current, new):
+    """Headings for the sections in new that current isn't already in
+
+    A top-level section is underlined; one inside it is set off with dashes.
+    """
+    same = 0
+    while same < min(len(current), len(new)) and current[same] == new[same]:
+        same += 1
+    headings = []
+    for depth, title in enumerate(new[same:], start=same):
+        if depth == 0:
+            headings.append('{}\n{}'.format(title, '=' * len(title)))
+        else:
+            headings.append('--- {} ---'.format(title))
+    return headings
+
+
+def indent_answer(value):
+    """An answer indented under its heading, each line wrapped to WRAP_WIDTH"""
+    lines = str(value).replace('\r\n', '\n').replace('\r', '\n').strip('\n')
+    wrapped = []
+    for line in lines.split('\n'):
+        if any(len(word) > UNWRAPPED_WORD for word in line.split()):
+            # Probably an SSH key or a long URL, which must stay copyable
+            wrapped.append('    ' + line.rstrip())
+        else:
+            wrapped += wrap(line, '    ', '    ') or ['']
+    return '\n'.join(wrapped)
+
+
+def bullet(text):
+    """A list item, wrapped to WRAP_WIDTH"""
+    return '\n'.join(wrap(text, '  - ', '    '))
+
+
+def wrap(text, first, rest):
+    """text wrapped to WRAP_WIDTH, keeping long words such as URLs whole"""
+    return textwrap.wrap(text.rstrip(), WRAP_WIDTH, initial_indent=first,
+                         subsequent_indent=rest, break_long_words=False,
+                         break_on_hyphens=False)
+
+
+def is_answered(value):
+    """Whether a field holds an answer worth showing in the ticket body"""
+    return bool(str(value).strip())
+
+
+def label_heading(label):
+    """A form label as a ticket heading: questions keep their question mark,
+    anything else ends in a colon"""
+    if label.endswith('?'):
+        return label
+    return label.rstrip('.') + ':'
 
 
 def convert_key_to_title(snake_case_key):
@@ -661,6 +830,10 @@ def send_ticket(msg, subject, send_to_queue='General',
                 mail_from='noreply@osuosl.org', attachments=None,
                 custom_fields=None):
     """Creates ticket and sends to RT"""
+    if getattr(conf, 'DRY_RUN', False):
+        log_ticket(msg, subject, send_to_queue, mail_from, attachments,
+                   custom_fields)
+        return
     # Creates connection to REST
     tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
     ticket_args = {
@@ -677,6 +850,21 @@ def send_ticket(msg, subject, send_to_queue='General',
         ticket_args['CustomFields'] = custom_fields
     # Create ticket and send to RT
     tracker.create_ticket(**ticket_args)
+
+
+def log_ticket(msg, subject, send_to_queue, mail_from, attachments,
+               custom_fields):
+    """Logs the ticket send_ticket would create, for DRY_RUN"""
+    lines = ['DRY_RUN ticket (not sent to RT)',
+             'Queue: {}'.format(send_to_queue),
+             'Subject: {}'.format(subject),
+             'Requestor: {}'.format(mail_from)]
+    if custom_fields:
+        lines.append('Custom fields: {}'.format(custom_fields))
+    for attachment in attachments or []:
+        lines.append('Attachment: {}'.format(attachment.file_name))
+    lines += ['', msg]
+    logging.getLogger('formsender').info('\n'.join(lines))
 
 
 # Start application

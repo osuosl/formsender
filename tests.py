@@ -1,4 +1,7 @@
 import unittest
+import os
+import types
+from importlib.machinery import SourceFileLoader
 import werkzeug
 import base64
 import json
@@ -26,6 +29,12 @@ def setUpModule():
                         ('CAPTCHA_ALLOWED_HOSTNAMES', None),
                         ('TRUSTED_PROXY_COUNT', 0)):
         setattr(conf, name, value)
+
+
+# The start of every ticket body
+CONTACT = ("Contact\n=======\n\n"
+           "Name:\n    Valid Guy\n\n"
+           "Email:\n    example@osuosl.org\n\n")
 
 
 class TestFormsender(unittest.TestCase):
@@ -141,6 +150,57 @@ class TestFormsender(unittest.TestCase):
             instance.create_ticket.assert_called_with(
                 queue='General', subject='subj', content='body',
                 Requestor='noreply@osuosl.org', attachments=[attachment])
+
+    def test_send_ticket_dry_run(self):
+        """
+        With DRY_RUN set, send_ticket logs the ticket and never contacts RT
+        """
+        attachment = rt.rest2.Attachment('proposal.pdf', 'application/pdf',
+                                         b'proposal bytes')
+        with patch.object(conf, 'DRY_RUN', True, create=True), \
+                patch('rt.rest2.Rt') as mock_rt, \
+                self.assertLogs('formsender', level='INFO') as logs:
+            handler.send_ticket('the body', 'subj', 'HostingRequests',
+                                'jane@example.org', [attachment],
+                                {'CompanyName': 'OPF'})
+        mock_rt.assert_not_called()
+        logged = logs.output[0]
+        for text in ('Queue: HostingRequests', 'Subject: subj',
+                     'Requestor: jane@example.org',
+                     "Custom fields: {'CompanyName': 'OPF'}",
+                     'Attachment: proposal.pdf', 'the body'):
+            self.assertIn(text, logged)
+
+    def test_send_ticket_dry_run_minimal(self):
+        """
+        A dry-run ticket without custom fields or attachments logs neither
+        """
+        with patch.object(conf, 'DRY_RUN', True, create=True), \
+                self.assertLogs('formsender', level='INFO') as logs:
+            handler.send_ticket('the body', 'subj')
+        self.assertNotIn('Custom fields', logs.output[0])
+        self.assertNotIn('Attachment', logs.output[0])
+
+    def test_conf_dist_dry_run(self):
+        """
+        conf.py.dist reads DRY_RUN from the environment and no longer
+        requires RT_TOKEN
+        """
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'conf.py.dist')
+
+        def load(env):
+            with patch.dict(os.environ, env, clear=True):
+                loader = SourceFileLoader('conf_dist', path)
+                module = types.ModuleType(loader.name)
+                loader.exec_module(module)
+                return module
+        for value, expected in (('1', True), ('true', True), ('YES', True),
+                                ('', False), ('0', False), ('no', False)):
+            dist = load({'TOKEN': 't', 'DRY_RUN': value})
+            self.assertIs(dist.DRY_RUN, expected)
+            self.assertIsNone(dist.RT_TOKEN)
+        self.assertIs(load({'TOKEN': 't'}).DRY_RUN, False)
 
     def test_extract_custom_fields(self):
         """
@@ -678,18 +738,227 @@ class TestFormsender(unittest.TestCase):
                                        'token': conf.TOKEN})
         env = builder.get_environ()
         req = Request(env)
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Some Field:\n"
-                          "This is multi line and should not be on the same "
-                          "line as the title\n\n")
+                          "    This is multi line and should not be on the "
+                          "same line as the title\n\n")
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
         self.assertEqual(formatted_message, target_message)
+
+    def test_format_message_uses_field_labels(self):
+        """
+        Fields named in field_labels are written first, in that order, under
+        their labels. Anything else follows as before, title-cased and
+        sorted, and field_labels itself stays out of the body.
+        """
+        labels = json.dumps([{'name': 'name', 'label': 'Name'},
+                             {'name': 'instance_vcpus', 'label': 'vCPUs'},
+                             {'name': 'ci_cd', 'label': 'CI/CD resources'},
+                             {'name': 'unchecked_box', 'label': 'Not sent'},
+                             {'name': 'deadline', 'label': 'Do you have a deadline?'},
+                             {'name': 'costs', 'label': 'Contributions to cover costs.'}])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'zebra_field': 'z',
+                   'costs': 'None',
+                   'deadline': 'No',
+                   'ci_cd': 'requested',
+                   'instance_vcpus': '8',
+                   'field_labels': labels}
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
+                          "vCPUs:\n    8\n\n"
+                          "CI/CD resources:\n    requested\n\n"
+                          "Do you have a deadline?\n    No\n\n"
+                          "Contributions to cover costs:\n    None\n\n"
+                          "Zebra Field:\n    z\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
+    def test_format_message_labelled_field_excluded(self):
+        """
+        A labelled field consumed as an RT custom field stays out of the body
+        """
+        labels = json.dumps([{'name': 'companyname', 'label': 'Company'},
+                             {'name': 'other', 'label': 'Other'}])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'companyname': 'OPF',
+                   'other': 'x',
+                   'field_labels': labels}
+        formatted = handler.format_message(message, exclude={'companyname'})
+        self.assertNotIn('OPF', formatted)
+        self.assertIn('Other:\n    x\n\n', formatted)
+
+    def test_format_message_skips_blank_answers(self):
+        """
+        Fields left blank, or holding only whitespace, are left out of the
+        body, whether or not the form labelled them. Defaults and zeros are
+        answers and stay.
+        """
+        labels = json.dumps([{'name': 'sponsor', 'label': 'Sponsor'},
+                             {'name': 'vms', 'label': 'Number of VMs'},
+                             {'name': 'managed', 'label': 'Managed?'}])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'sponsor': '',
+                   'vms': '0',
+                   'managed': 'Not sure',
+                   'notes': '  \n ',
+                   'unlabelled_blank': '',
+                   'field_labels': labels}
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
+                          "Number of VMs:\n    0\n\n"
+                          "Managed?\n    Not sure\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
+    def test_format_message_wraps_answers(self):
+        """
+        Long answers and list items are wrapped to WRAP_WIDTH under their
+        heading, keeping the requester's line breaks. A line with a long word,
+        such as an SSH key, isn't wrapped, so it can still be copied. A
+        section inside one with no chooser of its own is listed in the summary
+        under both titles.
+        """
+        labels = json.dumps([
+            {'name': 'mysql', 'label': 'MySQL', 'opens_section': True,
+             'section': ['Databases', 'MySQL']},
+            {'name': 'notes', 'label': 'Notes', 'section': ['Databases', 'MySQL']},
+            {'name': 'kind', 'label': 'A rather long option label that will '
+             'need to be wrapped onto a second line of text', 'group': 'Kind',
+             'section': ['Databases', 'MySQL']}])
+        key = 'ssh-ed25519 ' + 'A' * 68 + ' dana@kestrel.example'
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'mysql': 'requested',
+                   'notes': ('word ' * 20).strip() + '\n' + key,
+                   'kind': 'yes',
+                   'field_labels': labels}
+        target_message = (CONTACT +
+                          "Services requested\n==================\n\n"
+                          "  - Databases: MySQL\n\n"
+                          "Databases\n=========\n\n"
+                          "--- MySQL ---\n\n"
+                          "Notes:\n"
+                          "    word word word word word word word word word "
+                          "word word word word word word\n"
+                          "    word word word word word\n"
+                          "    " + key + "\n\n"
+                          "Kind:\n"
+                          "  - A rather long option label that will need to "
+                          "be wrapped onto a second line\n"
+                          "    of text\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
+    def test_field_labels(self):
+        """
+        field_labels returns the labels in order, fills in the optional
+        keys, and skips entries and section titles it can't use
+        """
+        labels = json.dumps([{'name': 'a', 'label': ' First '},
+                             'not a dict',
+                             {'name': 'b'},
+                             {'name': 'c', 'label': '   '},
+                             {'name': 3, 'label': 'Bad name'},
+                             {'name': 'd', 'label': 'Fourth',
+                              'section': [' Email ', 3, ' ', 'Forwards'],
+                              'opens_section': True, 'group': ' Which? '},
+                             {'name': 'e', 'label': 'Fifth',
+                              'section': 'not a list', 'opens_section': 'yes',
+                              'group': 4}])
+        self.assertEqual(handler.field_labels({'field_labels': labels}), [
+            {'name': 'a', 'label': 'First', 'section': (),
+             'opens_section': False, 'group': ''},
+            {'name': 'd', 'label': 'Fourth', 'section': ('Email', 'Forwards'),
+             'opens_section': True, 'group': 'Which?'},
+            {'name': 'e', 'label': 'Fifth', 'section': (),
+             'opens_section': False, 'group': ''},
+        ])
+
+    def test_format_message_sections_and_groups(self):
+        """
+        Labelled fields are written under headings for their sections, a
+        chosen section checkbox shows only its heading, chosen checkbox-group
+        options are listed under the group's label, and multi-line answers are
+        indented line by line
+        """
+        labels = json.dumps([
+            {'name': 'project', 'label': 'Project name'},
+            {'name': 'mail', 'label': 'Email', 'section': ['Email'],
+             'opens_section': True},
+            {'name': 'inbound', 'label': 'Receiving mail', 'group': 'What do you need?',
+             'section': ['Email']},
+            {'name': 'outbound', 'label': 'Sending mail', 'group': 'What do you need?',
+             'section': ['Email']},
+            {'name': 'forwards', 'label': 'Forwards', 'group': 'What do you need?',
+             'section': ['Email']},
+            {'name': 'domain', 'label': 'Domain(s)', 'section': ['Email']},
+            {'name': 'arch_x86', 'label': 'x86_64', 'group': 'Architectures',
+             'section': ['Email']},
+            {'name': 'tools', 'label': 'Collaboration tools',
+             'section': ['Collaboration tools'], 'opens_section': True},
+            {'name': 'gitlab', 'label': 'GitLab',
+             'section': ['Collaboration tools', 'GitLab'], 'opens_section': True},
+            {'name': 'gitlab_domain', 'label': 'Domain',
+             'section': ['Collaboration tools', 'GitLab']},
+            {'name': 'matrix_domain', 'label': 'Domain',
+             'section': ['Collaboration tools', 'Matrix']},
+            {'name': 'deadline', 'label': 'Do you have a hard deadline?',
+             'section': ['Other details']},
+        ])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'project': 'Kestrel',
+                   'mail': 'requested',
+                   'inbound': 'requested',
+                   'forwards': 'requested',
+                   'domain': 'kestrel.example',
+                   'arch_x86': 'yes',
+                   'tools': 'requested',
+                   'gitlab': 'requested',
+                   'gitlab_domain': 'git.kestrel.example',
+                   'matrix_domain': 'matrix.kestrel.example',
+                   'deadline': 'March 31\r\n\r\nOur VM contract ends.\r\n',
+                   'field_labels': labels}
+        target_message = (CONTACT +
+                          "Services requested\n==================\n\n"
+                          "  - Email\n"
+                          "  - Collaboration tools: GitLab\n\n"
+                          "Information\n===========\n\n"
+                          "Project name:\n    Kestrel\n\n"
+                          "Email\n=====\n\n"
+                          "What do you need?\n"
+                          "  - Receiving mail\n"
+                          "  - Forwards\n\n"
+                          "Domain(s):\n    kestrel.example\n\n"
+                          "Architectures:\n  - x86_64\n\n"
+                          "Collaboration tools\n===================\n\n"
+                          "--- GitLab ---\n\n"
+                          "Domain:\n    git.kestrel.example\n\n"
+                          "--- Matrix ---\n\n"
+                          "Domain:\n    matrix.kestrel.example\n\n"
+                          "Other details\n=============\n\n"
+                          "Do you have a hard deadline?\n"
+                          "    March 31\n\n    Our VM contract ends.\n\n")
+        self.assertEqual(handler.format_message(message), target_message)
+
+    def test_field_labels_fallback(self):
+        """
+        A missing, malformed or non-list field_labels gives no labels, so the
+        body falls back to title-cased, sorted field names
+        """
+        for value in (None, '', 'not json', '{"name": "a"}'):
+            msg = {} if value is None else {'field_labels': value}
+            self.assertEqual(handler.field_labels(msg), [])
+        message = {'name': 'Valid Guy',
+                   'email': 'example@osuosl.org',
+                   'b_field': '2',
+                   'a_field': '1',
+                   'field_labels': 'not json'}
+        self.assertIn("A Field:\n    1\n\nB Field:\n    2\n\n",
+                      handler.format_message(message))
 
     def test_set_mail_subject_with_both_options(self):
         """
@@ -1025,16 +1294,12 @@ class TestFormsender(unittest.TestCase):
                                        'fields_to_join': 'name,email,date,some_field'})
         env = builder.get_environ()
         req = Request(env)
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Fields To Join:\n"
-                          "Valid Guy:example@osuosl.org:%s:This is some info.\n\n"
+                          "    Valid Guy:example@osuosl.org:%s:This is some info.\n\n"
                           "Some Field:\n"
-                          "This is some info.\n\n" % str(int(time.time())))
+                          "    This is some info.\n\n" % str(int(time.time())))
 
         message = handler.create_msg(req)
         formatted_message = handler.format_message(message)
@@ -1056,16 +1321,12 @@ class TestFormsender(unittest.TestCase):
                                        'fields_to_join': 'name,email,date,some_field'})
         env = builder.get_environ()
         req = Request(env)
-        target_message = ("Contact:\n"
-                          "--------\n"
-                          "NAME:   Valid Guy\n"
-                          "EMAIL:   example@osuosl.org\n\n"
-                          "Information:\n"
-                          "------------\n"
+        target_message = (CONTACT +
+                          "Information\n===========\n\n"
                           "Some Field:\n"
-                          "This is some info.\n\n"
+                          "    This is some info.\n\n"
                           "With New Field Name:\n"
-                          "Valid Guy:example@osuosl.org:"
+                          "    Valid Guy:example@osuosl.org:"
                           "%s:This is some info.\n\n" % str(int(time.time())))
 
         message = handler.create_msg(req)
@@ -1194,6 +1455,17 @@ class TestFormsender(unittest.TestCase):
         self.assertFalse(controller.is_duplicate('whatever'))
         self.assertEqual(controller.hash_list, [])
 
+    def test_controller_duplicate_check_off(self):
+        """
+        A DUPLICATE_CHECK_TIME of 0 turns the duplicate check off, so the same
+        submission is accepted again.
+        """
+        controller = handler.Controller()
+        with patch.object(conf, 'DUPLICATE_CHECK_TIME', 0):
+            self.assertFalse(controller.is_duplicate('whatever'))
+            self.assertFalse(controller.is_duplicate('whatever'))
+        self.assertEqual(controller.hash_list, [])
+
 
 class TestCaptcha(unittest.TestCase):
     """
@@ -1267,6 +1539,20 @@ class TestCaptcha(unittest.TestCase):
         with patch.multiple(conf, TURNSTILE_SECRET=None,
                             RECAPTCHA_SECRET=''):
             self.assertEqual(captcha.configured_providers(), ['altcha'])
+
+    def test_create_app_requires_rt_token(self):
+        """
+        create_app refuses to start without RT_TOKEN unless DRY_RUN is set
+        """
+        with patch.object(conf, 'RT_TOKEN', None), \
+                patch.object(conf, 'DRY_RUN', False, create=True):
+            with self.assertRaises(RuntimeError):
+                handler.create_app()
+        with patch.object(conf, 'RT_TOKEN', None), \
+                patch.object(conf, 'DRY_RUN', True, create=True), \
+                self.assertLogs('formsender', level='WARNING') as logs:
+            handler.create_app()
+        self.assertIn('DRY_RUN', logs.output[-1])
 
     def test_create_app_requires_a_provider(self):
         with patch.multiple(conf, TURNSTILE_SECRET=None, ALTCHA_HMAC_KEY=None,
@@ -1735,6 +2021,22 @@ class TestCaptchaHardening(unittest.TestCase):
         logged = ' '.join(str(call) for call in logger.debug.call_args_list)
         self.assertIn('Valid Guy', logged)
         self.assertNotIn(payload, logged)
+
+    def test_field_labels_are_not_logged_with_the_submission(self):
+        app = handler.create_app()
+        labels = json.dumps([{'name': 'name', 'label': 'Label Text'}])
+        req = self.request(name='Valid Guy', email='example@osuosl.org',
+                           last_name='', token=conf.TOKEN,
+                           redirect='http://www.example.com',
+                           altcha=self.altcha_payload(), field_labels=labels)
+        with patch.object(app, 'logger') as logger:
+            with patch('request_handler.validate_email', return_value=True):
+                with patch('request_handler.send_ticket'):
+                    with patch('werkzeug.utils.redirect'):
+                        app.on_form_page(req)
+        logged = ' '.join(str(call) for call in logger.debug.call_args_list)
+        self.assertIn('Valid Guy', logged)
+        self.assertNotIn('Label Text', logged)
 
     def test_issued_challenge_verifies_with_the_shipped_defaults(self):
         """The mint and verify paths must agree on the real conf.py values"""

@@ -64,3 +64,24 @@ Run the image you just built the same way as the published one:
 
 Formsender will be listening on the container's port 5000, bound to the host's
 port 5000. Forms POSTed to port 5000 on the host will be handled by Formsender.
+
+
+Test Without RT
+---------------
+
+To see the tickets a form would create without sending them to RT, run the
+container with ``DRY_RUN=1`` and no ``RT_TOKEN``. Each ticket is written to the
+container log instead:
+
+::
+
+   $ docker run -p 5000:5000 \
+       -e DRY_RUN=1 \
+       -e TOKEN=s0m3T0k3n \
+       -e TURNSTILE_SECRET=1x0000000000000000000000000000000AA \
+       formsender
+   $ docker logs -f <container>
+
+``1x0000000000000000000000000000000AA`` is Cloudflare's Turnstile test secret,
+which accepts any token from the matching test site key
+``1x00000000000000000000AA``.
