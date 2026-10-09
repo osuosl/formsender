@@ -1,24 +1,24 @@
 # Major versions change the challenge protocol; keep in step with the
 # altcha browser widget major documented in docs/source/form_setup.rst.
-altcha==2.1.0
+altcha==2.2.0
 anyio==4.15.1
 certifi==2026.7.22
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
 gunicorn==26.2.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
 idna==3.20
 Jinja2==3.1.6
-MarkupSafe==3.0.3
+MarkupSafe==3.0.4
 packaging==26.3
 requests==2.34.2
 requests-toolbelt==1.0.0
 rt==3.8.1
-sentry-sdk==2.70.0
+sentry-sdk==2.71.0
 six==1.17.0
 sniffio==1.3.1
 typing_extensions==4.16.0
 urllib3==2.8.0
 validate-email==1.3
-Werkzeug==3.1.8
+Werkzeug==3.1.9
