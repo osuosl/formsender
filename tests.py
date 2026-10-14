@@ -108,10 +108,22 @@ class TestFormsender(unittest.TestCase):
             # Call send_ticket and assert ticket creation returns new ticket ID
             handler.create_app()
             handler.send_ticket(msg, msg_subj)
+            mock_rt.assert_called_with(conf.URL, token=conf.RT_TOKEN,
+                                       http_timeout=20)
             instance.create_ticket.assert_called_with(queue='General',
                                                       subject=msg_subj,
                                                       Requestor='noreply@osuosl.org',
                                                       content=msg)
+
+    def test_send_ticket_rt_timeout(self):
+        """
+        RT_TIMEOUT is passed to the RT client as its HTTP timeout
+        """
+        with patch('rt.rest2.Rt') as mock_rt, \
+                patch.object(conf, 'RT_TIMEOUT', 30, create=True):
+            handler.send_ticket('the body', 'subj')
+        mock_rt.assert_called_with(conf.URL, token=conf.RT_TOKEN,
+                                   http_timeout=30)
 
     def test_extract_attachments(self):
         """
@@ -201,6 +213,21 @@ class TestFormsender(unittest.TestCase):
             self.assertIs(dist.DRY_RUN, expected)
             self.assertIsNone(dist.RT_TOKEN)
         self.assertIs(load({'TOKEN': 't'}).DRY_RUN, False)
+
+    def test_conf_dist_rt_timeout(self):
+        """
+        conf.py.dist reads RT_TIMEOUT from the environment, defaulting to
+        python-rt's own 20 seconds when it is unset or empty
+        """
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'conf.py.dist')
+        for env, expected in (({}, 20), ({'RT_TIMEOUT': ''}, 20),
+                              ({'RT_TIMEOUT': '30'}, 30)):
+            with patch.dict(os.environ, dict(env, TOKEN='t'), clear=True):
+                loader = SourceFileLoader('conf_dist', path)
+                module = types.ModuleType(loader.name)
+                loader.exec_module(module)
+            self.assertEqual(module.RT_TIMEOUT, expected)
 
     def test_extract_custom_fields(self):
         """

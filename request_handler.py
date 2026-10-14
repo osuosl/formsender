@@ -835,7 +835,8 @@ def send_ticket(msg, subject, send_to_queue='General',
                    custom_fields)
         return
     # Creates connection to REST
-    tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN)
+    tracker = rt.rest2.Rt(conf.URL, token=conf.RT_TOKEN,
+                          http_timeout=getattr(conf, 'RT_TIMEOUT', 20))
     ticket_args = {
         'queue': send_to_queue,
         'subject': subject,

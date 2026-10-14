@@ -29,6 +29,7 @@ defines the remaining tunables as plain values:
     ALTCHA_EXPIRES = 600
     URL = os.environ.get('RT_URL', "https://support.osuosl.org/REST/2.0/")
     RT_TOKEN = os.environ.get('RT_TOKEN')
+    RT_TIMEOUT = int(os.environ.get('RT_TIMEOUT') or 20)
     DRY_RUN = os.environ.get('DRY_RUN', '').lower() in ('1', 'true', 'yes')
     SENTRY_URI = os.environ.get('SENTRY_URI')
 
@@ -96,6 +97,12 @@ These must be supplied in the environment Formsender runs in (for example with
 * ``RT_URL`` (optional) overrides the RT REST2 endpoint. It defaults to
   ``https://support.osuosl.org/REST/2.0/``. Setting it lets a single image serve
   a different RT instance, so one container can be run per RT instance.
+* ``RT_TIMEOUT`` (optional) is how many seconds RT gets for each HTTP step of a
+  ticket create, such as connecting and reading the reply; it is not a limit on
+  the whole call. It defaults to ``20``. RT can create the ticket after
+  Formsender gives up, so the sender sees an error for a ticket that exists.
+  Raise it when RT is slow to answer, and see :ref:`docker` for the gunicorn
+  timeout that must cover it.
 * ``SENTRY_URI`` (optional) is a Sentry DSN. When set, errors are reported to
   Sentry.
 
