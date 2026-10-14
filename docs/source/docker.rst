@@ -66,6 +66,26 @@ Formsender will be listening on the container's port 5000, bound to the host's
 port 5000. Forms POSTed to port 5000 on the host will be handled by Formsender.
 
 
+Slow RT Instances
+-----------------
+
+When RT takes longer than 20 seconds to answer a ticket create, raise
+``RT_TIMEOUT``. Gunicorn kills a worker that has been busy for 30 seconds by
+default, so raise its timeout with ``GUNICORN_CMD_ARGS`` to cover the captcha
+check (up to 10 seconds) plus ``RT_TIMEOUT``. Keep both under the backend
+timeout of any proxy in front of Formsender:
+
+::
+
+   $ docker run -p 5000:5000 \
+       -e TOKEN=s0m3T0k3n \
+       -e TURNSTILE_SECRET=your-turnstile-secret \
+       -e RT_TOKEN=your-rt-token \
+       -e RT_TIMEOUT=30 \
+       -e GUNICORN_CMD_ARGS='--timeout 45' \
+       formsender
+
+
 Test Without RT
 ---------------
 
