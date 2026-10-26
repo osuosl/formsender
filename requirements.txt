@@ -2,7 +2,7 @@
 # altcha browser widget major documented in docs/source/form_setup.rst.
 altcha==2.3.0
 anyio==4.15.1
-certifi==2026.7.22
+certifi==2026.10.19
 charset-normalizer==3.5.2
 gunicorn==26.2.0
 h11==0.16.0
